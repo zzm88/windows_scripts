@@ -108,7 +108,7 @@
         console.log('Starting FindOutAllAvailableCourts...');
 
         // Updated selector to find the header cells with the new structure
-        const headerCells = document.querySelectorAll('th[data-v-4349d30f] div');
+        const headerCells = document.querySelectorAll('th div');
         console.log('Found header cells:', headerCells.length);
 
         const courtTypes = {};
@@ -128,7 +128,7 @@
         });
 
         // Updated selector for time cells
-        const timeCells = document.querySelectorAll('td[data-v-4349d30f]');
+        const timeCells = document.querySelectorAll('td');
         console.log('Found time cells:', timeCells.length);
 
         let availableCourts = {};
@@ -188,7 +188,7 @@
         let attempts = 0;
 
         const checkTable = () => {
-            const headerCells = document.querySelectorAll('th[data-v-4349d30f] div');
+            const headerCells = document.querySelectorAll('th div');
             if (headerCells.length > 0) {
                 console.log('Table found, proceeding with search');
                 callback();
@@ -257,21 +257,22 @@
         console.log('Filtered courts:', filteredCourts);
         console.log('Found match:', foundMatch);
 
-        // Output results
-        for (const [time, courts] of Object.entries(filteredCourts)) {
-            let output = `${time} `;
-            let courtTypes = [];
-            for (const [courtType, count] of Object.entries(courts)) {
-                courtTypes.push(`${count}个${courtType}`);
+        // Collect all results into a single message
+        if (foundMatch) {
+            let allResults = [];
+            for (const [time, courts] of Object.entries(filteredCourts)) {
+                let courtTypes = [];
+                for (const [courtType, count] of Object.entries(courts)) {
+                    courtTypes.push(`${count}个${courtType}`);
+                }
+                allResults.push(`${time}: ${courtTypes.join(' ')}`);
             }
-            const outputResult = output + courtTypes.join(' ');
-            console.log('Output result:', outputResult);
 
-            if (foundMatch) {
-                const title = document.title;
-                console.log('Sending notification with title:', title);
-                sendNotification(title + ":" + outputResult);
-            }
+            // Send a single notification with all results
+            const title = document.title;
+            const combinedMessage = allResults.join(' | ');
+            console.log('Sending combined notification:', combinedMessage);
+            sendNotification(title + ": " + combinedMessage);
         }
     }
 
