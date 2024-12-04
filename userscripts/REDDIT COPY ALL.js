@@ -4,7 +4,7 @@
 // @version      0.1
 // @description  Adds a button to copy all content (post and replies) in a Reddit thread
 // @author       You
-// @match        https://www.reddit.com/r/*/comments/*
+// @match        https://www.reddit.com/*
 // @grant        GM_addStyle
 // ==/UserScript==
 

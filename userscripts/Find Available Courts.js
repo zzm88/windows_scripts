@@ -6,6 +6,8 @@
 // @author       Your Name
 // @match        https://*.ydmap.cn/booking/schedule/*
 // @grant        GM_xmlhttpRequest
+// @grant        GM_notification
+// @grant        window.focus
 // ==/UserScript==
 
 (function() {
@@ -277,17 +279,66 @@
     }
 
     function sendNotification(message) {
+        // Send Bark notification
         GM_xmlhttpRequest({
             method: "GET",
             url: `https://api.day.app/DuVn5KaRwyfNdhixASmxqd/${encodeURIComponent(message)}?sound=minuet`,
             onload: function(response) {
                 if (response.status >= 200 && response.status < 300) {
-                    console.log('Notification sent successfully');
+                    console.log('Bark notification sent successfully');
                 } else {
-                    console.log('Error sending notification');
+                    console.log('Error sending Bark notification');
                 }
             }
         });
+
+        // Try GM_notification first
+        try {
+            GM_notification({
+                title: "Court Availability",
+                text: message,
+                timeout: 10000,
+                onclick: function() {
+                    window.focus();
+                }
+            });
+            console.log('GM_notification sent');
+        } catch (e) {
+            console.log('GM_notification failed:', e);
+        }
+
+        // Also try browser's Notification API as backup
+        try {
+            if (!("Notification" in window)) {
+                console.log("This browser does not support desktop notifications");
+                return;
+            }
+
+            console.log('Current notification permission:', Notification.permission);
+            
+            if (Notification.permission === "granted") {
+                const notification = new Notification("Court Availability", {
+                    body: message,
+                    icon: "https://www.google.com/favicon.ico",
+                    requireInteraction: true
+                });
+                console.log('Browser notification sent');
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(function (permission) {
+                    console.log('Permission result:', permission);
+                    if (permission === "granted") {
+                        const notification = new Notification("Court Availability", {
+                            body: message,
+                            icon: "https://www.google.com/favicon.ico",
+                            requireInteraction: true
+                        });
+                        console.log('Browser notification sent after permission grant');
+                    }
+                });
+            }
+        } catch (e) {
+            console.log('Browser notification failed:', e);
+        }
     }
     // Attach event listener to button
     document.getElementById('findCourtsButton').addEventListener('click', () => {
