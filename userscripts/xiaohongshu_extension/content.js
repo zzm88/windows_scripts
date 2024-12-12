@@ -182,4 +182,117 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
   });
   
+  // Add to your existing message listener
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      console.log('Message received in content script:', request);
+      
+      if (request.action === 'downloadAndUpload') {
+          console.log('Triggering download and upload process...');
+          downloadAndUploadVideo();
+          sendResponse({ success: true });
+      }
+      return true;
+  });
+  
+  // Add new function that combines download and upload
+  function downloadAndUploadVideo() {
+      console.log('=== Starting downloadAndUploadVideo function ===');
+      const fileUrl = 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4';
+      
+      console.log('Sending downloadFile message to background script...');
+      chrome.runtime.sendMessage({ 
+          action: 'downloadFile', 
+          url: fileUrl 
+      }, function(response) {
+          console.log('Raw response from background script:', {
+              success: response?.success,
+              hasData: !!response?.data,
+              dataType: response?.data ? typeof response.data : 'none',
+              contentType: response?.contentType
+          });
+          
+          if (response?.success && response?.data) {
+              try {
+                  // Convert Base64 back to ArrayBuffer
+                  const binaryString = atob(response.data);
+                  const bytes = new Uint8Array(binaryString.length);
+                  for (let i = 0; i < binaryString.length; i++) {
+                      bytes[i] = binaryString.charCodeAt(i);
+                  }
+                  const arrayBuffer = bytes.buffer;
+                  
+                  console.log('Download successful!');
+                  console.log('ArrayBuffer received, size:', arrayBuffer.byteLength, 'bytes');
+                  
+                  // Create a Blob from the downloaded data
+                  const blob = new Blob([arrayBuffer], { 
+                      type: response.contentType || 'video/mp4' 
+                  });
+                  console.log('Blob created:', {
+                      size: blob.size,
+                      type: blob.type
+                  });
+
+                  // Create File object
+                  const file = new File([blob], "test_video.mp4", {
+                      type: "video/mp4",
+                      lastModified: new Date().getTime()
+                  });
+                  console.log('File object created:', {
+                      name: file.name,
+                      size: file.size,
+                      type: file.type,
+                      lastModified: file.lastModified
+                  });
+          
+                  // Create DataTransfer
+                  const dataTransfer = new DataTransfer();
+                  dataTransfer.items.add(file);
+                  console.log('DataTransfer object created with file');
+          
+                  // Find upload input
+                  const uploadInput = document.querySelector('.upload-input');
+                  console.log('Upload input element:', uploadInput);
+                  
+                  if (!uploadInput) {
+                      throw new Error('Upload input element not found in DOM');
+                  }
+                  
+                  // Create and dispatch drop event
+                  const dropEvent = new DragEvent('drop', {
+                      dataTransfer: dataTransfer,
+                      bubbles: true,
+                      cancelable: true
+                  });
+                  console.log('Drop event created');
+          
+                  // Simulate file drop
+                  uploadInput.files = dataTransfer.files;
+                  console.log('Files set on input:', {
+                      filesCount: uploadInput.files.length,
+                      firstFileName: uploadInput.files[0]?.name
+                  });
+          
+                  // Dispatch the drop event
+                  uploadInput.dispatchEvent(dropEvent);
+                  console.log('Drop event dispatched successfully');
+          
+                  // Trigger change event
+                  const changeEvent = new Event('change', {
+                      bubbles: true
+                  });
+                  uploadInput.dispatchEvent(changeEvent);
+                  console.log('Change event dispatched successfully');
+                  
+              } catch (error) {
+                  console.error('Error in upload process:', error);
+                  console.error('Error stack:', error.stack);
+              }
+          } else {
+              console.error('Download failed:', response?.error || 'No response');
+              console.error('Full response:', response);
+          }
+      });
+  }
+  
   console.log('Content script fully loaded and initialized');
