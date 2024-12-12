@@ -1,0 +1,19 @@
+{
+    "manifest_version": 3,
+    "name": "XHS File Selector",
+    "version": "1.0",
+    "description": "Automate file selection for XHS",
+    "permissions": [
+        "fileSystem"
+    ],
+    "host_permissions": [
+        "https://creator.xiaohongshu.com/*"
+    ],
+    "content_scripts": [{
+        "matches": ["https://creator.xiaohongshu.com/*"],
+        "js": ["content.js"]
+    }],
+    "background": {
+        "service_worker": "background.js"
+    }
+}
