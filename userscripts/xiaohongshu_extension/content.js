@@ -95,4 +95,91 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       console.log('ReadFile message sent to background script');
   }
   
+  function downloadAndLogFile() {
+      console.log('=== Starting downloadAndLogFile function ===');
+      const fileUrl = 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4';
+      
+      console.log('Sending downloadFile message to background script...');
+      chrome.runtime.sendMessage({ 
+          action: 'downloadFile', 
+          url: fileUrl 
+      }, function(response) {
+          console.log('Raw response from background script:', {
+              success: response?.success,
+              hasData: !!response?.data,
+              dataType: response?.data ? typeof response.data : 'none',
+              contentType: response?.contentType
+          });
+          
+          if (response?.success && response?.data) {
+              try {
+                  // Convert Base64 back to ArrayBuffer
+                  const binaryString = atob(response.data);
+                  const bytes = new Uint8Array(binaryString.length);
+                  for (let i = 0; i < binaryString.length; i++) {
+                      bytes[i] = binaryString.charCodeAt(i);
+                  }
+                  const arrayBuffer = bytes.buffer;
+                  
+                  console.log('Download successful!');
+                  console.log('ArrayBuffer received, size:', arrayBuffer.byteLength, 'bytes');
+                  
+                  // Create a Blob from the downloaded data
+                  const blob = new Blob([arrayBuffer], { 
+                      type: response.contentType || 'video/mp4' 
+                  });
+                  console.log('Blob created:', {
+                      size: blob.size,
+                      type: blob.type
+                  });
+
+                  // Create an object URL to verify the video
+                  const url = URL.createObjectURL(blob);
+                  console.log('Created blob URL:', url);
+
+                  // Optional: Create a video element to test the blob
+                  const video = document.createElement('video');
+                  video.src = url;
+                  video.controls = true;
+                  video.style.display = 'none';
+                  document.body.appendChild(video);
+                  
+                  // Test if video is playable
+                  video.addEventListener('loadedmetadata', () => {
+                      console.log('Video metadata loaded:', {
+                          duration: video.duration,
+                          videoWidth: video.videoWidth,
+                          videoHeight: video.videoHeight
+                      });
+                      document.body.removeChild(video);
+                  });
+                  
+                  video.addEventListener('error', (e) => {
+                      console.error('Video load error:', video.error);
+                      document.body.removeChild(video);
+                  });
+              } catch (error) {
+                  console.error('Error processing video data:', error);
+                  console.error('Error stack:', error.stack);
+              }
+          } else {
+              console.error('Download failed:', response?.error || 'No response');
+              console.error('Full response:', response);
+          }
+      });
+  }
+  
+  // Add message listener for the new action
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      console.log('Message received in content script:', request);
+      
+      if (request.action === 'triggerDownload') {
+          console.log('Triggering download process...');
+          downloadAndLogFile();
+          sendResponse({ success: true });
+      }
+      // ... existing message handlers ...
+      return true;
+  });
+  
   console.log('Content script fully loaded and initialized');

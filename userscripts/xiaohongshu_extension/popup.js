@@ -69,22 +69,15 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
 
 // Add new event listener for test read file button
 document.getElementById('testReadFileBtn').addEventListener('click', async () => {
-  console.log('Test read file button clicked');
+  console.log('Test download file button clicked');
   
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     console.log('Current tab:', tab);
 
-    // First inject the content script
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ['content.js']
-    });
-    console.log('Content script injected successfully');
-
-    // Then send the message
+    // Send message to trigger download
     chrome.tabs.sendMessage(tab.id, {
-      action: 'triggerUpload'
+      action: 'triggerDownload'
     }, response => {
       if (chrome.runtime.lastError) {
         console.error('Error sending message:', chrome.runtime.lastError);
@@ -93,7 +86,7 @@ document.getElementById('testReadFileBtn').addEventListener('click', async () =>
       console.log('Response from content script:', response);
     });
   } catch (error) {
-    console.error('Error in test read file:', error);
+    console.error('Error in test download:', error);
   }
 });
 
