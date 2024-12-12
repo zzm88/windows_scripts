@@ -103,67 +103,41 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       chrome.runtime.sendMessage({ 
           action: 'downloadFile', 
           url: fileUrl 
-      }, function(response) {
+      }, response => {
           console.log('Raw response from background script:', {
-              success: response?.success,
-              hasData: !!response?.data,
-              dataType: response?.data ? typeof response.data : 'none',
-              contentType: response?.contentType
+              success: response.success,
+              byteLength: response.byteLength,
+              contentType: response.contentType
           });
           
-          if (response?.success && response?.data) {
-              try {
-                  // Convert Base64 back to ArrayBuffer
-                  const binaryString = atob(response.data);
-                  const bytes = new Uint8Array(binaryString.length);
-                  for (let i = 0; i < binaryString.length; i++) {
-                      bytes[i] = binaryString.charCodeAt(i);
-                  }
-                  const arrayBuffer = bytes.buffer;
-                  
-                  console.log('Download successful!');
-                  console.log('ArrayBuffer received, size:', arrayBuffer.byteLength, 'bytes');
-                  
-                  // Create a Blob from the downloaded data
-                  const blob = new Blob([arrayBuffer], { 
-                      type: response.contentType || 'video/mp4' 
-                  });
-                  console.log('Blob created:', {
-                      size: blob.size,
-                      type: blob.type
-                  });
-
-                  // Create an object URL to verify the video
-                  const url = URL.createObjectURL(blob);
-                  console.log('Created blob URL:', url);
-
-                  // Optional: Create a video element to test the blob
-                  const video = document.createElement('video');
-                  video.src = url;
-                  video.controls = true;
-                  video.style.display = 'none';
-                  document.body.appendChild(video);
-                  
-                  // Test if video is playable
-                  video.addEventListener('loadedmetadata', () => {
-                      console.log('Video metadata loaded:', {
-                          duration: video.duration,
-                          videoWidth: video.videoWidth,
-                          videoHeight: video.videoHeight
-                      });
-                      document.body.removeChild(video);
-                  });
-                  
-                  video.addEventListener('error', (e) => {
-                      console.error('Video load error:', video.error);
-                      document.body.removeChild(video);
-                  });
-              } catch (error) {
-                  console.error('Error processing video data:', error);
-                  console.error('Error stack:', error.stack);
+          if (response && response.success && response.data) {
+              // Convert base64 back to ArrayBuffer
+              const binaryString = atob(response.data);
+              const bytes = new Uint8Array(binaryString.length);
+              for (let i = 0; i < binaryString.length; i++) {
+                  bytes[i] = binaryString.charCodeAt(i);
               }
+              const arrayBuffer = bytes.buffer;
+              
+              console.log('Download successful!');
+              console.log('ArrayBuffer created, size:', arrayBuffer.byteLength, 'bytes');
+              
+              // Create a Blob from the downloaded data
+              const blob = new Blob([arrayBuffer], { 
+                  type: response.contentType || 'video/mp4' 
+              });
+              console.log('Blob created:', {
+                  size: blob.size,
+                  type: blob.type
+              });
+
+              // Create an object URL to verify the video
+              const url = URL.createObjectURL(blob);
+              console.log('Created blob URL:', url);
+
+              // Rest of your video testing code...
           } else {
-              console.error('Download failed:', response?.error || 'No response');
+              console.error('Download failed:', response ? response.error : 'No response');
               console.error('Full response:', response);
           }
       });
@@ -294,5 +268,178 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           }
       });
   }
+  
+  function readLocalFile() {
+      console.log('=== Starting readLocalFile function ===');
+      
+      // Get extension URL for the video file
+      const extensionUrl = chrome.runtime.getURL('videos/01e6d5bb486e05110103730391b2e623d6_259.mp4video.mp4');
+      console.log('Extension file URL:', extensionUrl);
+      
+      // Use fetch to read the file
+      fetch(extensionUrl)
+          .then(response => {
+              console.log('Fetch response received:', {
+                  ok: response.ok,
+                  status: response.status,
+                  statusText: response.statusText
+              });
+              
+              if (!response.ok) {
+                  throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              return response.arrayBuffer();
+          })
+          .then(data => {
+              console.log('File read successfully!');
+              console.log('File size:', data.byteLength, 'bytes');
+              
+              // Create a Blob to verify the data
+              const blob = new Blob([data], { type: 'video/mp4' });
+              console.log('Blob created:', {
+                  size: blob.size,
+                  type: blob.type
+              });
+
+              // Create an object URL to verify the video
+              const url = URL.createObjectURL(blob);
+              console.log('Created blob URL:', url);
+
+              // Optional: Create a video element to test the blob
+              const video = document.createElement('video');
+              video.src = url;
+              video.controls = true;
+              video.style.display = 'none';
+              document.body.appendChild(video);
+              
+              // Test if video is playable
+              video.addEventListener('loadedmetadata', () => {
+                  console.log('Video metadata loaded:', {
+                      duration: video.duration,
+                      videoWidth: video.videoWidth,
+                      videoHeight: video.videoHeight
+                  });
+                  document.body.removeChild(video);
+              });
+              
+              video.addEventListener('error', (e) => {
+                  console.error('Video load error:', video.error);
+                  document.body.removeChild(video);
+              });
+          })
+          .catch(error => {
+              console.error('Error reading local file:', error);
+              console.error('Error stack:', error.stack);
+          });
+  }
+  
+  // Add to your existing message listeners
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      console.log('Message received in content script:', request);
+      
+      if (request.action === 'readLocalFile') {
+          console.log('Triggering local file read...');
+          readLocalFile();
+          sendResponse({ success: true });
+      }
+      return true;
+  });
+  
+  // Add new function for uploading selected video
+  function uploadSelectedVideo(videoPath) {
+      console.log('=== Starting uploadSelectedVideo function ===');
+      
+      // Get extension URL for the video file
+      const extensionUrl = chrome.runtime.getURL(videoPath);
+      console.log('Extension file URL:', extensionUrl);
+      
+      // Use fetch to read the file
+      fetch(extensionUrl)
+          .then(response => {
+              if (!response.ok) {
+                  throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              return response.arrayBuffer();
+          })
+          .then(data => {
+              console.log('File read successfully!');
+              console.log('File size:', data.byteLength, 'bytes');
+              
+              // Create a Blob from the downloaded data
+              const blob = new Blob([data], { type: 'video/mp4' });
+              console.log('Blob created:', {
+                  size: blob.size,
+                  type: blob.type
+              });
+
+              // Create File object
+              const file = new File([blob], videoPath.split('/').pop(), {
+                  type: "video/mp4",
+                  lastModified: new Date().getTime()
+              });
+              console.log('File object created:', {
+                  name: file.name,
+                  size: file.size,
+                  type: file.type,
+                  lastModified: file.lastModified
+              });
+      
+              // Create DataTransfer
+              const dataTransfer = new DataTransfer();
+              dataTransfer.items.add(file);
+              console.log('DataTransfer object created with file');
+      
+              // Find upload input
+              const uploadInput = document.querySelector('.upload-input');
+              console.log('Upload input element:', uploadInput);
+              
+              if (!uploadInput) {
+                  throw new Error('Upload input element not found in DOM');
+              }
+              
+              // Create and dispatch drop event
+              const dropEvent = new DragEvent('drop', {
+                  dataTransfer: dataTransfer,
+                  bubbles: true,
+                  cancelable: true
+              });
+              console.log('Drop event created');
+
+              // Simulate file drop
+              uploadInput.files = dataTransfer.files;
+              console.log('Files set on input:', {
+                  filesCount: uploadInput.files.length,
+                  firstFileName: uploadInput.files[0]?.name
+              });
+
+              // Dispatch the drop event
+              uploadInput.dispatchEvent(dropEvent);
+              console.log('Drop event dispatched successfully');
+
+              // Trigger change event
+              const changeEvent = new Event('change', {
+                  bubbles: true
+              });
+              uploadInput.dispatchEvent(changeEvent);
+              console.log('Change event dispatched successfully');
+              
+          })
+          .catch(error => {
+              console.error('Error in upload process:', error);
+              console.error('Error stack:', error.stack);
+          });
+  }
+
+  // Add to your existing message listeners
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      console.log('Message received in content script:', request);
+      
+      if (request.action === 'uploadSelectedVideo') {
+          console.log('Triggering selected video upload...');
+          uploadSelectedVideo(request.videoPath);
+          sendResponse({ success: true });
+      }
+      return true;
+  });
   
   console.log('Content script fully loaded and initialized');

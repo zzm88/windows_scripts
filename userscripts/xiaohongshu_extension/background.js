@@ -13,52 +13,42 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         
         fetch(request.url)
             .then(response => {
-                console.log('Fetch response received:', {
-                    ok: response.ok,
-                    status: response.status,
-                    statusText: response.statusText
-                });
-                
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 return response.arrayBuffer();
             })
             .then(data => {
-                console.log('ArrayBuffer received:', {
-                    byteLength: data.byteLength,
-                    isArrayBuffer: data instanceof ArrayBuffer
-                });
-                
                 if (!data || data.byteLength === 0) {
                     throw new Error('Received empty data');
                 }
                 
                 // Convert ArrayBuffer to Base64
-                const base64 = btoa(
-                    new Uint8Array(data)
-                        .reduce((data, byte) => data + String.fromCharCode(byte), '')
-                );
+                const binary = new Uint8Array(data);
+                let base64 = '';
+                binary.forEach(byte => {
+                    base64 += String.fromCharCode(byte);
+                });
+                const base64Data = btoa(base64);
                 
-                console.log('File downloaded successfully, size:', data.byteLength);
+                console.log('File downloaded and converted to base64, size:', base64Data.length);
+                
                 sendResponse({ 
                     success: true, 
-                    data: base64,
+                    data: base64Data,
+                    byteLength: data.byteLength,
                     contentType: 'video/mp4'
                 });
             })
             .catch(error => {
-                console.error('Download failed:', {
-                    message: error.message,
-                    stack: error.stack
-                });
+                console.error('Download failed:', error);
                 sendResponse({ 
                     success: false, 
                     error: error.message 
                 });
             });
             
-        return true; // Will respond asynchronously
+        return true;
     }
     
     if (request.action === 'readFile') {
