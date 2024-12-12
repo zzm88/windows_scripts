@@ -442,4 +442,64 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
   });
   
+  function addCoverImgListener() {
+      console.log('=== Starting addCoverImgListener function ===');
+      
+      // Function to check for coverImg
+      function checkForCoverImg() {
+          console.log('Checking for cover image...');
+          const coverImg = document.querySelector('.coverImg');
+          
+          if (coverImg) {
+              console.log('Cover image found!', {
+                  element: coverImg,
+                  src: coverImg.src,
+                  timestamp: new Date().toISOString()
+              });
+          } else {
+              console.log('Cover image not found', {
+                  timestamp: new Date().toISOString()
+              });
+          }
+      }
+
+      // Start periodic checking
+      const intervalId = setInterval(checkForCoverImg, 3000);
+      console.log('Cover image listener started with interval ID:', intervalId);
+
+      // Store interval ID in window to allow stopping if needed
+      window._coverImgInterval = intervalId;
+
+      // Optional: Add function to stop the listener
+      window.stopCoverImgListener = function() {
+          if (window._coverImgInterval) {
+              clearInterval(window._coverImgInterval);
+              console.log('Cover image listener stopped');
+          }
+      };
+  }
+
+  // Add to your existing message listeners
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      console.log('Message received in content script:', request);
+      
+      if (request.action === 'addCoverImgListener') {
+          console.log('Adding cover image listener...');
+          // Clear existing interval if any
+          if (window._coverImgInterval) {
+              clearInterval(window._coverImgInterval);
+          }
+          addCoverImgListener();
+          sendResponse({ success: true });
+      } else if (request.action === 'stopCoverImgListener') {
+          console.log('Stopping cover image listener...');
+          if (window._coverImgInterval) {
+              clearInterval(window._coverImgInterval);
+              delete window._coverImgInterval;
+          }
+          sendResponse({ success: true });
+      }
+      return true;
+  });
+  
   console.log('Content script fully loaded and initialized');

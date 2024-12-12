@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html>
 <body>
-  <select id="videoSelect" style="width: 100%; margin-bottom: 10px;">
-    <option value="">Select a video...</option>
-  </select>
-  <button id="uploadBtn">Upload Selected Video</button>
+  <div style="margin-bottom: 10px;">
+    <input type="text" id="videoInput" placeholder="Enter video filename..." style="width: 100%;">
+    <div id="videoPath" style="color: gray; font-size: 12px; word-break: break-all;"></div>
+  </div>
+  <button id="uploadBtn">Upload Video</button>
   <button id="testReadFileBtn">Test Download File</button>
   <button id="testReadLocalFileBtn">Test Read Local File</button>
+  <button id="addCoverImgListenerBtn">Start Cover Image Listener</button>
+  <button id="stopCoverImgListenerBtn">Stop Cover Image Listener</button>
   <script src="popup.js"></script>
 </body>
 </html>
