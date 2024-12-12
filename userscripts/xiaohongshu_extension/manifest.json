@@ -10,12 +10,23 @@
       "file://*"
     ],
     "host_permissions": [
-      "file://*"
+      "file://*",
+      "<all_urls>"
     ],
     "background": {
       "service_worker": "background.js"
     },
     "action": {
       "default_popup": "popup.html"
-    }
-  }
+    },
+    "content_scripts": [
+      {
+        "matches": ["<all_urls>"],
+        "js": ["content.js"]
+      }
+    ],
+    "web_accessible_resources": [{
+      "resources": ["content.js"],
+      "matches": ["<all_urls>"]
+    }]
+}
