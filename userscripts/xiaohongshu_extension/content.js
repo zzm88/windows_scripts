@@ -1,113 +1,84 @@
-const container = document.createElement('div');
-Object.assign(container.style, {
-    position: 'fixed',
-    top: '20px',
-    right: '20px',
-    padding: '20px',
-    backgroundColor: 'white',
-    border: '1px solid #ccc',
-    borderRadius: '4px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    zIndex: 10000
-});
-
-const pathInput = document.createElement('input');
-pathInput.placeholder = 'Enter video file path';
-pathInput.style.width = '200px';
-pathInput.style.marginRight = '10px';
-
-const startButton = document.createElement('button');
-startButton.textContent = 'Start';
-startButton.style.padding = '5px 10px';
-
-// Add status display
-const statusDiv = document.createElement('div');
-statusDiv.style.marginTop = '10px';
-statusDiv.style.color = '#666';
-
-startButton.onclick = async () => {
-    try {
-        statusDiv.textContent = 'Clicking start button...';
-        const path = pathInput.value;
-        if (!path) {
-            statusDiv.textContent = 'Please enter a file path';
-            return;
-        }
-
-        // Find the upload input - try multiple possible selectors
-        const uploadInput = document.querySelector('.upload-input') || 
-                          document.querySelector('input[type="file"]') ||
-                          document.querySelector('input[accept*="video"]');
-
-        if (!uploadInput) {
-            statusDiv.textContent = 'Upload input not found! Please make sure you are on the correct page.';
-            console.error('Upload input not found');
-            return;
-        }
-
-        statusDiv.textContent = 'Found upload input, sending file select message...';
-        console.log('Upload input found:', uploadInput);
-
-        chrome.runtime.sendMessage({
-            type: 'SELECT_FILE',
-            path: path
-        });
-    } catch (error) {
-        statusDiv.textContent = 'Error: ' + error.message;
-        console.error('Error:', error);
+// Add message listener at the top level
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log('Message received in content script:', request);
+    if (request.action === 'triggerUpload') {
+      console.log('Triggering upload...');
+      uploadVideo();
+      sendResponse({ success: true });
     }
-};
-
-// Add message listener for file selection response
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('Received message:', message);
-    
-    if (message.type === 'FILE_SELECTED' && message.file) {
-        statusDiv.textContent = 'File selected: ' + message.file.name;
+    return true;
+  });
+  
+  function uploadVideo() {
+      console.log('uploadVideo function called');
+      const filePath = 'file:///C:/Users/zzm88/Downloads/01e6d5bb486e05110103730391b2e623d6_259.mp4video.mp4';
+      
+      console.log('Sending readFile message...');
+      chrome.runtime.sendMessage({ 
+        action: 'readFile', 
+        filePath: filePath 
+      }, response => {
+        console.log('Got response from background:', response);
         
-        try {
-            const uploadInput = document.querySelector('.upload-input') || 
-                              document.querySelector('input[type="file"]') ||
-                              document.querySelector('input[accept*="video"]');
-
-            if (!uploadInput) {
-                statusDiv.textContent = 'Upload input not found after file selection';
-                return;
-            }
-
-            // Create a new File object from the selected file
-            const file = new File(
-                [new Blob([''], { type: message.file.type })], // temporary blob
-                message.file.name,
-                {
-                    type: message.file.type,
-                    lastModified: message.file.lastModified
-                }
-            );
-
-            // Create a DataTransfer object and add the file
+        if (response && response.success) {
+          try {
+            console.log('Response data size:', response.data.byteLength);
+            
+            // Convert ArrayBuffer to Blob
+            const blob = new Blob([response.data], { type: 'video/mp4' });
+            console.log('Blob created, size:', blob.size);
+            
+            // Create File object
+            const file = new File([blob], "01e6d5bb486e05110103730391b2e623d6_259.mp4video.mp4", {
+              type: "video/mp4",
+              lastModified: new Date().getTime()
+            });
+            console.log('File object created:', file);
+      
+            // Create DataTransfer
             const dataTransfer = new DataTransfer();
             dataTransfer.items.add(file);
-
-            // Set the files property of the upload input
+      
+            // Find upload input
+            const uploadInput = document.querySelector('.upload-input');
+            console.log('Found upload input:', uploadInput);
+            
+            if (!uploadInput) {
+              throw new Error('Upload input not found');
+            }
+            
+            // Create and dispatch drop event
+            const dropEvent = new DragEvent('drop', {
+                dataTransfer: dataTransfer,
+                bubbles: true,
+                cancelable: true
+            });
+            console.log('Drop event created');
+    
+            // Simulate file drop
             uploadInput.files = dataTransfer.files;
-
-            // Dispatch change event to trigger the upload
-            const event = new Event('change', { bubbles: true });
-            uploadInput.dispatchEvent(event);
-
-            statusDiv.textContent = 'File upload triggered';
-        } catch (error) {
-            statusDiv.textContent = 'Error during file upload: ' + error.message;
-            console.error('Upload error:', error);
+            console.log('Files set on input');
+    
+            // Dispatch the drop event
+            uploadInput.dispatchEvent(dropEvent);
+            console.log('Drop event dispatched');
+    
+            // Trigger change event
+            const changeEvent = new Event('change', {
+                bubbles: true
+            });
+            uploadInput.dispatchEvent(changeEvent);
+            console.log('Change event dispatched');
+            
+          } catch (error) {
+            console.error('Error in upload process:', error);
+          }
+        } else {
+          console.error('Failed to read file:', response ? response.error : 'No response');
         }
-    }
-});
-
-container.appendChild(pathInput);
-container.appendChild(startButton);
-container.appendChild(statusDiv);
-document.body.appendChild(container);
-
-// Log when the script is loaded
-console.log('XHS File Selector content script loaded');
+      });
+      console.log('ReadFile message sent');
+  }
+  
+  // Log when content script loads
+  console.log('Content script loaded');

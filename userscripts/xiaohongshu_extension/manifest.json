@@ -1,19 +1,21 @@
 {
     "manifest_version": 3,
-    "name": "XHS File Selector",
+    "name": "Video Upload Helper",
     "version": "1.0",
-    "description": "Automate file selection for XHS",
     "permissions": [
-        "fileSystem"
+      "tabs",
+      "activeTab",
+      "scripting",
+      "storage",
+      "file://*"
     ],
     "host_permissions": [
-        "https://creator.xiaohongshu.com/*"
+      "file://*"
     ],
-    "content_scripts": [{
-        "matches": ["https://creator.xiaohongshu.com/*"],
-        "js": ["content.js"]
-    }],
     "background": {
-        "service_worker": "background.js"
+      "service_worker": "background.js"
+    },
+    "action": {
+      "default_popup": "popup.html"
     }
-}
+  }
