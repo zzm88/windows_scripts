@@ -400,4 +400,17 @@ document.getElementById('fillContentBtn').addEventListener('click', async () => 
     }
 });
 
+// Add listener for coverImageFound message
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log('Message received in popup:', request);
+    
+    if (request.action === 'coverImageFound') {
+        console.log('Cover image found, triggering API request...');
+        // Simulate click on the request API button
+        document.getElementById('requestApiBtn').click();
+        sendResponse({ success: true });
+    }
+    return true;
+});
+
 console.log('Popup script loaded');

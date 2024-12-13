@@ -463,6 +463,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                   src: coverImg.src,
                   timestamp: new Date().toISOString()
               });
+              
+              // Send message to popup to trigger API request
+              chrome.runtime.sendMessage({ 
+                  action: 'coverImageFound',
+                  coverImgSrc: coverImg.src 
+              }, response => {
+                  if (chrome.runtime.lastError) {
+                      console.error('Error sending message:', chrome.runtime.lastError);
+                      return;
+                  }
+                  console.log('Cover image found message sent:', response);
+              });
+
+              // Stop checking once found
+              if (window._coverImgInterval) {
+                  clearInterval(window._coverImgInterval);
+                  delete window._coverImgInterval;
+              }
           } else {
               console.log('Cover image not found', {
                   timestamp: new Date().toISOString()
