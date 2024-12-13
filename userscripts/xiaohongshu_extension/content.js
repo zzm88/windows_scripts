@@ -91,6 +91,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             uploadInput.dispatchEvent(changeEvent);
             console.log('Change event dispatched successfully');
             
+            // Call addCoverImgListener after successful upload
+            addCoverImgListener();
+            
           } catch (error) {
             console.error('Error in upload process:', error);
             console.error('Error stack:', error.stack);
@@ -265,6 +268,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                   uploadInput.dispatchEvent(changeEvent);
                   console.log('Change event dispatched successfully');
                   
+                  // Call addCoverImgListener after successful upload
+                  addCoverImgListener();
+                  
               } catch (error) {
                   console.error('Error in upload process:', error);
                   console.error('Error stack:', error.stack);
@@ -430,6 +436,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               uploadInput.dispatchEvent(changeEvent);
               console.log('Change event dispatched successfully');
               
+              // Call addCoverImgListener after successful upload
+              addCoverImgListener();
+              
           })
           .catch(error => {
               console.error('Error in upload process:', error);
@@ -451,6 +460,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   function addCoverImgListener() {
       console.log('=== Starting addCoverImgListener function ===');
+      
+      // Clear any existing interval first
+      if (window._coverImgInterval) {
+          console.log('Clearing existing cover image listener:', window._coverImgInterval);
+          clearInterval(window._coverImgInterval);
+          delete window._coverImgInterval;
+      }
       
       // Function to check for coverImg
       function checkForCoverImg() {
@@ -478,6 +494,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
               // Stop checking once found
               if (window._coverImgInterval) {
+                  console.log('Clearing interval after finding cover image:', window._coverImgInterval);
                   clearInterval(window._coverImgInterval);
                   delete window._coverImgInterval;
               }
@@ -495,11 +512,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // Store interval ID in window to allow stopping if needed
       window._coverImgInterval = intervalId;
 
-      // Optional: Add function to stop the listener
-      window.stopCoverImgListener = function() {
+      // Run an immediate check
+      checkForCoverImg();
+
+      return () => {
           if (window._coverImgInterval) {
+              console.log('Cleaning up cover image listener:', window._coverImgInterval);
               clearInterval(window._coverImgInterval);
-              console.log('Cover image listener stopped');
+              delete window._coverImgInterval;
           }
       };
   }
@@ -510,10 +530,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       
       if (request.action === 'addCoverImgListener') {
           console.log('Adding cover image listener...');
-          // Clear existing interval if any
-          if (window._coverImgInterval) {
-              clearInterval(window._coverImgInterval);
-          }
           addCoverImgListener();
           sendResponse({ success: true });
       } else if (request.action === 'stopCoverImgListener') {
