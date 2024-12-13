@@ -527,6 +527,42 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
   });
   
+  // Add new function to check and submit
+  function checkAndSubmit() {
+      console.log('Checking conditions before submission...');
+      
+      // Check for cover image
+      const coverImg = document.querySelector('.coverImg');
+      if (!coverImg) {
+          console.error('Cover image not found');
+          return false;
+      }
+      
+      // Check for title
+      const titleInput = document.querySelector('input.d-text[placeholder*="标题"]');
+      if (!titleInput || !titleInput.value.trim()) {
+          console.error('Title is empty or not found');
+          return false;
+      }
+      
+      // Check for content
+      const contentEditor = document.querySelector('.ql-editor[contenteditable="true"]');
+      if (!contentEditor || !contentEditor.textContent.trim()) {
+          console.error('Content is empty or not found');
+          return false;
+      }
+      
+      console.log('All conditions met! Ready to submit:', {
+          hasCoverImg: !!coverImg,
+          title: titleInput.value,
+          contentLength: contentEditor.textContent.length
+      });
+      console.log('Please click the submit button to proceed');
+      
+      return true;
+  }
+  
+  // Modify the fillTitleAndContent function to call checkAndSubmit
   function fillTitleAndContent(data) {
       try {
           // Find the title input
@@ -548,6 +584,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           } else {
               console.error('Content editor not found');
           }
+
+          // Add a small delay before checking conditions
+          setTimeout(() => {
+              checkAndSubmit();
+          }, 1000);
+
       } catch (error) {
           console.error('Error filling content:', error);
       }
