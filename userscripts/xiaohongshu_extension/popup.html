@@ -68,13 +68,13 @@
       transition: background-color 0.2s;
     }
 
-    #uploadBtn, #fillContentBtn {
+    #uploadBtn, #fillContentBtn, #requestApiBtn {
       background-color: #1a73e8;
       color: white;
       grid-column: span 2;
     }
 
-    #uploadBtn:hover, #fillContentBtn:hover {
+    #uploadBtn:hover, #fillContentBtn:hover, #requestApiBtn:hover {
       background-color: #1557b0;
     }
 
@@ -86,6 +86,66 @@
     .utility-button:hover {
       background-color: #e8eaed;
     }
+
+    #apiResponse {
+      margin-top: 8px;
+      padding: 8px;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .api-section {
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      background-color: #f8f9fa;
+    }
+
+    .api-section h3 {
+      margin: 0 0 12px 0;
+      color: #1a73e8;
+      font-size: 16px;
+    }
+
+    #apiKeyInput {
+      font-family: monospace;
+    }
+
+    .password-input-wrapper {
+      position: relative;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #666;
+      padding: 4px;
+    }
+
+    .expandable-textarea {
+      transition: height 0.2s ease;
+      min-height: 50px;
+    }
+
+    .expandable-textarea:focus {
+      height: 150px !important;
+    }
+
+    .expandable-textarea.expanded {
+      height: 150px;
+    }
   </style>
 </head>
 <body>
@@ -94,6 +154,32 @@
       <label for="videoInput">Video Filename</label>
       <input type="text" id="videoInput" placeholder="Enter video filename...">
       <div id="videoPath"></div>
+    </div>
+
+    <div class="api-section">
+      <h3>API Configuration</h3>
+      <div class="input-group">
+        <label for="apiKeyInput">API Key</label>
+        <div class="password-input-wrapper">
+          <input type="password" id="apiKeyInput" placeholder="Enter DeepSeek API key...">
+          <button class="toggle-password" type="button">👁️</button>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label for="apiAddressInput">API Address</label>
+        <input type="text" id="apiAddressInput" placeholder="Enter API address..." value="https://api.deepseek.com/chat/completions">
+      </div>
+
+      <div class="input-group">
+        <label for="promptInput">Prompt 1</label>
+        <textarea id="promptInput" class="expandable-textarea" placeholder="Enter your first prompt..."></textarea>
+      </div>
+
+      <div class="input-group">
+        <label for="promptInput2">Prompt 2</label>
+        <textarea id="promptInput2" class="expandable-textarea" placeholder="Enter your second prompt..."></textarea>
+      </div>
     </div>
 
     <div class="input-group">
@@ -109,11 +195,14 @@
     <div class="button-group">
       <button id="uploadBtn">Upload Video</button>
       <button id="fillContentBtn">Fill Title & Content</button>
+      <button id="requestApiBtn">Request API</button>
       <button id="testReadFileBtn" class="utility-button">Test Download File</button>
       <button id="testReadLocalFileBtn" class="utility-button">Test Read Local File</button>
       <button id="addCoverImgListenerBtn" class="utility-button">Start Cover Image Listener</button>
       <button id="stopCoverImgListenerBtn" class="utility-button">Stop Cover Image Listener</button>
     </div>
+
+    <div id="apiResponse"></div>
   </div>
   <script src="popup.js"></script>
 </body>

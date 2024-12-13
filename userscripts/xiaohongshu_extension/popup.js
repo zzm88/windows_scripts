@@ -2,23 +2,53 @@
 document.addEventListener('DOMContentLoaded', () => {
     const videoInput = document.getElementById('videoInput');
     const videoPath = document.getElementById('videoPath');
+    const promptInput = document.getElementById('promptInput');
+    const promptInput2 = document.getElementById('promptInput2');
+    const apiAddressInput = document.getElementById('apiAddressInput');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const titleInput = document.getElementById('titleInput');
+    const contentInput = document.getElementById('contentInput');
     
-    // Load saved filename
-    chrome.storage.local.get(['videoFilename'], (result) => {
+    // Load saved values
+    chrome.storage.local.get([
+        'videoFilename',
+        'promptText',
+        'promptText2',
+        'apiAddress',
+        'apiKey',
+        'titleText',
+        'contentText'
+    ], (result) => {
         if (result.videoFilename) {
             videoInput.value = result.videoFilename;
             updateVideoPath(result.videoFilename);
         }
+        if (result.promptText) {
+            promptInput.value = result.promptText;
+        }
+        if (result.promptText2) {
+            promptInput2.value = result.promptText2;
+        }
+        if (result.apiAddress) {
+            apiAddressInput.value = result.apiAddress;
+        }
+        if (result.apiKey) {
+            apiKeyInput.value = result.apiKey;
+        }
+        if (result.titleText) {
+            titleInput.value = result.titleText;
+        }
+        if (result.contentText) {
+            contentInput.value = result.contentText;
+        }
     });
-});
 
-// Update and save input when changed
-document.getElementById('videoInput').addEventListener('input', (event) => {
-    const filename = event.target.value;
-    updateVideoPath(filename);
-    
-    chrome.storage.local.set({
-        videoFilename: filename
+    // Setup password toggle
+    const togglePassword = document.querySelector('.toggle-password');
+    togglePassword.addEventListener('click', function() {
+        const type = apiKeyInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        apiKeyInput.setAttribute('type', type);
+        this.textContent = type === 'password' ? '👁️' : '🔒';
     });
 });
 
@@ -33,6 +63,144 @@ function updateVideoPath(filename) {
         videoPath.style.display = 'none';
     }
 }
+
+// Save input values when they change
+function saveInputValue(element, key) {
+    element.addEventListener('input', (event) => {
+        const value = event.target.value;
+        chrome.storage.local.set({
+            [key]: value
+        });
+    });
+}
+
+// Setup persistence for all inputs
+document.addEventListener('DOMContentLoaded', () => {
+    saveInputValue(document.getElementById('videoInput'), 'videoFilename');
+    saveInputValue(document.getElementById('promptInput'), 'promptText');
+    saveInputValue(document.getElementById('promptInput2'), 'promptText2');
+    saveInputValue(document.getElementById('apiAddressInput'), 'apiAddress');
+    saveInputValue(document.getElementById('apiKeyInput'), 'apiKey');
+    saveInputValue(document.getElementById('titleInput'), 'titleText');
+    saveInputValue(document.getElementById('contentInput'), 'contentText');
+});
+
+// Function to fill content from API response
+async function processApiResponseAndFill(assistantMessage) {
+    const titleInput = document.getElementById('titleInput');
+    const contentInput = document.getElementById('contentInput');
+    
+    // Parse the response to extract title and content
+    const titleMatch = assistantMessage.match(/Title:(.*?)(?=Content:|$)/s);
+    const contentMatch = assistantMessage.match(/Content:(.*?)$/s);
+    
+    if (titleMatch && titleMatch[1]) {
+        const title = titleMatch[1].trim();
+        titleInput.value = title;
+        titleInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    
+    if (contentMatch && contentMatch[1]) {
+        const content = contentMatch[1].trim();
+        contentInput.value = content;
+        contentInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    
+    // Trigger the fill content function
+    try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        chrome.tabs.sendMessage(tab.id, {
+            action: 'fillContent',
+            data: {
+                title: titleInput.value,
+                content: contentInput.value
+            }
+        }, response => {
+            if (chrome.runtime.lastError) {
+                console.error('Error sending message:', chrome.runtime.lastError);
+                return;
+            }
+            console.log('Content filled successfully:', response);
+        });
+    } catch (error) {
+        console.error('Error filling content:', error);
+    }
+}
+
+// Add API request functionality
+document.getElementById('requestApiBtn').addEventListener('click', async () => {
+    console.log('Request API button clicked');
+    
+    const promptInput = document.getElementById('promptInput');
+    const promptInput2 = document.getElementById('promptInput2');
+    const apiAddressInput = document.getElementById('apiAddressInput');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const apiResponse = document.getElementById('apiResponse');
+    
+    const prompt1 = promptInput.value.trim();
+    const prompt2 = promptInput2.value.trim();
+    const apiAddress = apiAddressInput.value.trim();
+    const apiKey = apiKeyInput.value.trim();
+    
+    // Combine prompts
+    const combinedPrompt = prompt2 ? `${prompt1}\n\n${prompt2}` : prompt1;
+    
+    if (!combinedPrompt || !apiAddress || !apiKey) {
+        console.error('Prompt, API address, or API key is empty');
+        apiResponse.textContent = 'Error: Please fill in at least one prompt, API address, and API key';
+        apiResponse.style.display = 'block';
+        return;
+    }
+    
+    try {
+        apiResponse.textContent = 'Loading...';
+        apiResponse.style.display = 'block';
+        
+        const response = await fetch(apiAddress, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: "deepseek-chat",
+                messages: [
+                    {
+                        role: "system",
+                        content: "You are a helpful assistant. Please format your response in two parts: title and content. Start the title with 'Title:' and the content with 'Content:'"
+                    },
+                    {
+                        role: "user",
+                        content: combinedPrompt
+                    }
+                ],
+                stream: false
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('API Response:', data);
+        
+        // Extract the assistant's message from the response
+        const assistantMessage = data.choices?.[0]?.message?.content;
+        if (assistantMessage) {
+            apiResponse.textContent = assistantMessage;
+            await processApiResponseAndFill(assistantMessage);
+        } else {
+            apiResponse.textContent = JSON.stringify(data, null, 2);
+        }
+        apiResponse.style.display = 'block';
+        
+    } catch (error) {
+        console.error('Error calling API:', error);
+        apiResponse.textContent = `Error: ${error.message}`;
+        apiResponse.style.display = 'block';
+    }
+});
 
 // Modify upload button to use input value
 document.getElementById('uploadBtn').addEventListener('click', async () => {
