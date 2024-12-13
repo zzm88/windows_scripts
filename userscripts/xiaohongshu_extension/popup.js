@@ -187,4 +187,49 @@ document.getElementById('stopCoverImgListenerBtn').addEventListener('click', asy
     }
 });
 
+// Add listener for fill content button
+document.getElementById('fillContentBtn').addEventListener('click', async () => {
+    console.log('Fill content button clicked');
+    
+    const titleInput = document.getElementById('titleInput');
+    const contentInput = document.getElementById('contentInput');
+    
+    const title = titleInput.value.trim();
+    const content = contentInput.value.trim();
+    
+    if (!title || !content) {
+        console.error('Title or content is empty');
+        return;
+    }
+    
+    try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        console.log('Current tab:', tab);
+
+        // First inject the content script
+        await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['content.js']
+        });
+        console.log('Content script injected');
+
+        // Then send the message with the content
+        chrome.tabs.sendMessage(tab.id, {
+            action: 'fillContent',
+            data: {
+                title: title,
+                content: content
+            }
+        }, response => {
+            if (chrome.runtime.lastError) {
+                console.error('Error sending message:', chrome.runtime.lastError);
+                return;
+            }
+            console.log('Response from content script:', response);
+        });
+    } catch (error) {
+        console.error('Error in filling content:', error);
+    }
+});
+
 console.log('Popup script loaded');

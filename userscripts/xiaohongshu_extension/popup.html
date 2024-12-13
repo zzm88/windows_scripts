@@ -1,15 +1,120 @@
 <!DOCTYPE html>
 <html>
+<head>
+  <style>
+    body {
+      width: 400px;
+      padding: 16px;
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .input-group label {
+      font-size: 14px;
+      color: #333;
+      font-weight: 500;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 50px;
+    }
+
+    #contentInput {
+      min-height: 100px;
+    }
+
+    #videoPath {
+      color: #666;
+      font-size: 12px;
+      word-break: break-all;
+      margin-top: 4px;
+    }
+
+    .button-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    button {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+
+    #uploadBtn, #fillContentBtn {
+      background-color: #1a73e8;
+      color: white;
+      grid-column: span 2;
+    }
+
+    #uploadBtn:hover, #fillContentBtn:hover {
+      background-color: #1557b0;
+    }
+
+    .utility-button {
+      background-color: #f1f3f4;
+      color: #3c4043;
+    }
+
+    .utility-button:hover {
+      background-color: #e8eaed;
+    }
+  </style>
+</head>
 <body>
-  <div style="margin-bottom: 10px;">
-    <input type="text" id="videoInput" placeholder="Enter video filename..." style="width: 100%;">
-    <div id="videoPath" style="color: gray; font-size: 12px; word-break: break-all;"></div>
+  <div class="container">
+    <div class="input-group">
+      <label for="videoInput">Video Filename</label>
+      <input type="text" id="videoInput" placeholder="Enter video filename...">
+      <div id="videoPath"></div>
+    </div>
+
+    <div class="input-group">
+      <label for="titleInput">Title</label>
+      <textarea id="titleInput" placeholder="Enter title..."></textarea>
+    </div>
+
+    <div class="input-group">
+      <label for="contentInput">Content</label>
+      <textarea id="contentInput" placeholder="Enter content..."></textarea>
+    </div>
+
+    <div class="button-group">
+      <button id="uploadBtn">Upload Video</button>
+      <button id="fillContentBtn">Fill Title & Content</button>
+      <button id="testReadFileBtn" class="utility-button">Test Download File</button>
+      <button id="testReadLocalFileBtn" class="utility-button">Test Read Local File</button>
+      <button id="addCoverImgListenerBtn" class="utility-button">Start Cover Image Listener</button>
+      <button id="stopCoverImgListenerBtn" class="utility-button">Stop Cover Image Listener</button>
+    </div>
   </div>
-  <button id="uploadBtn">Upload Video</button>
-  <button id="testReadFileBtn">Test Download File</button>
-  <button id="testReadLocalFileBtn">Test Read Local File</button>
-  <button id="addCoverImgListenerBtn">Start Cover Image Listener</button>
-  <button id="stopCoverImgListenerBtn">Stop Cover Image Listener</button>
   <script src="popup.js"></script>
 </body>
 </html>

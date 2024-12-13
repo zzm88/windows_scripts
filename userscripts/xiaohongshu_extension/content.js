@@ -10,6 +10,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       uploadVideo();
       sendResponse({ success: true });
     }
+    
+    if (request.action === 'fillContent') {
+        console.log('Filling content with:', request.data);
+        fillTitleAndContent(request.data);
+        sendResponse({ success: true });
+    }
+    
     return true;
   });
   
@@ -501,5 +508,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
       return true;
   });
+  
+  function fillTitleAndContent(data) {
+      try {
+          // Find the title input
+          const titleInput = document.querySelector('input.d-text[placeholder*="标题"]');
+          if (titleInput) {
+              titleInput.value = data.title;
+              titleInput.dispatchEvent(new Event('input', { bubbles: true }));
+              console.log('Title filled successfully');
+          } else {
+              console.error('Title input not found');
+          }
+
+          // Find the content editor
+          const contentEditor = document.querySelector('.ql-editor[contenteditable="true"]');
+          if (contentEditor) {
+              contentEditor.innerHTML = data.content.split('\n').map(line => `<p>${line}</p>`).join('');
+              contentEditor.dispatchEvent(new Event('input', { bubbles: true }));
+              console.log('Content filled successfully');
+          } else {
+              console.error('Content editor not found');
+          }
+      } catch (error) {
+          console.error('Error filling content:', error);
+      }
+  }
   
   console.log('Content script fully loaded and initialized');
