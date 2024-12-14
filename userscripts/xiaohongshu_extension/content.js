@@ -1,6 +1,9 @@
 // Add message listener at the top level
 console.log('Content script initializing...');
 
+// Add this variable at the top of the file, after the console.log('Content script initializing...');
+let lastLoggedContent = null;
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('Message received in content script:', request);
     console.log('Sender:', sender);
@@ -573,36 +576,46 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           title: titleInput.value,
           contentLength: contentEditor.textContent.length
       });
-      console.log('Please click the submit button to proceed');
-      // Find the submit button
-      const submitButton = Array.from(document.querySelectorAll('button.d-button span.d-text'))
-          .find(span => span.textContent.includes("暂存离开"));
+
+      // Create a unique identifier for this content
+      const contentIdentifier = `${titleInput.value}|${contentEditor.textContent}`;
+      
+      // Check if this content has already been logged
+      if (lastLoggedContent === contentIdentifier) {
+          console.log('Content already logged, skipping log file creation');
+      } else {
+          // Save the log file only if content is new
+          const dateTime = new Date().toISOString().replace(/[:.]/g, '-');
+          const logFileName = `logs/${dateTime}.txt`;
+          const logContent = `Title: ${titleInput.value}\nContent: ${contentEditor.textContent}`;
+
+          // Create a Blob with the log content
+          const logBlob = new Blob([logContent], { type: 'text/plain' });
+
+          // Create a link element to download the log file
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(logBlob);
+          link.download = logFileName;
+
+          // Append the link to the document and trigger the download
+          document.body.appendChild(link);
+          link.click();
+
+          // Remove the link element from the document
+          document.body.removeChild(link);
+          
+          // Update the last logged content
+          lastLoggedContent = contentIdentifier;
+      }
+      
+      // Find and click the submit button
+      const submitButton = document.querySelector('.header-icon');
       if (submitButton) {
-          // Click the submit button
           submitButton.click();
           console.log('Submit button clicked successfully');
       } else {
           console.error('Submit button not found');
       }
-      const dateTime = new Date().toISOString().replace(/[:.]/g, '-');
-      const logFileName = chrome.runtime.getURL(`logs/${dateTime}.txt`);
-      const logContent = `Title: ${titleInput.value}\nContent: ${contentEditor.textContent}`;
-
-      // Create a Blob with the log content
-      const logBlob = new Blob([logContent], { type: 'text/plain' });
-
-      // Create a link element to download the log file
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(logBlob);
-      link.download = logFileName;
-
-      // Append the link to the document and trigger the download
-      document.body.appendChild(link);
-      link.click();
-
-      // Remove the link element from the document
-      document.body.removeChild(link);
-
       
       return true;
   }
