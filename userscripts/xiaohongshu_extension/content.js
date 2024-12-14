@@ -574,6 +574,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           contentLength: contentEditor.textContent.length
       });
       console.log('Please click the submit button to proceed');
+      // Find the submit button
+      const submitButton = Array.from(document.querySelectorAll('button.d-button span.d-text'))
+          .find(span => span.textContent.includes("暂存离开"));
+      if (submitButton) {
+          // Click the submit button
+          submitButton.click();
+          console.log('Submit button clicked successfully');
+      } else {
+          console.error('Submit button not found');
+      }
+      const dateTime = new Date().toISOString().replace(/[:.]/g, '-');
+      const logFileName = chrome.runtime.getURL(`logs/${dateTime}.txt`);
+      const logContent = `Title: ${titleInput.value}\nContent: ${contentEditor.textContent}`;
+
+      // Create a Blob with the log content
+      const logBlob = new Blob([logContent], { type: 'text/plain' });
+
+      // Create a link element to download the log file
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(logBlob);
+      link.download = logFileName;
+
+      // Append the link to the document and trigger the download
+      document.body.appendChild(link);
+      link.click();
+
+      // Remove the link element from the document
+      document.body.removeChild(link);
+
       
       return true;
   }

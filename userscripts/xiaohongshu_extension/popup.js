@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiKeyInput = document.getElementById('apiKeyInput');
     const titleInput = document.getElementById('titleInput');
     const contentInput = document.getElementById('contentInput');
+    const uploadIntervalInput = document.getElementById('uploadIntervalInput');
     
     // Load saved values
     chrome.storage.local.get([
@@ -40,6 +41,68 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (result.contentText) {
             contentInput.value = result.contentText;
+        }
+    });
+
+    // Load saved interval value
+    chrome.storage.local.get(['uploadInterval'], (result) => {
+        if (result.uploadInterval) {
+            uploadIntervalInput.value = result.uploadInterval;
+        }
+    });
+
+    // Save interval value when changed
+    uploadIntervalInput.addEventListener('input', (event) => {
+        chrome.storage.local.set({
+            uploadInterval: event.target.value
+        });
+    });
+
+    // Auto upload functionality
+    let autoUploadInterval;
+
+    document.getElementById('startAutoUploadBtn').addEventListener('click', () => {
+        const intervalMinutes = parseInt(uploadIntervalInput.value) || 5;
+        const intervalMs = intervalMinutes * 60 * 1000;
+
+        // Store the interval ID in chrome.storage to persist it
+        autoUploadInterval = setInterval(() => {
+            document.getElementById('uploadBtn').click();
+        }, intervalMs);
+
+        chrome.storage.local.set({
+            autoUploadActive: true,
+            lastUploadTime: Date.now()
+        });
+
+        // Trigger first upload immediately
+        document.getElementById('uploadBtn').click();
+    });
+
+    document.getElementById('stopAutoUploadBtn').addEventListener('click', () => {
+        if (autoUploadInterval) {
+            clearInterval(autoUploadInterval);
+            autoUploadInterval = null;
+        }
+        chrome.storage.local.set({
+            autoUploadActive: false
+        });
+    });
+
+    // Check if auto upload was active before popup was closed
+    chrome.storage.local.get(['autoUploadActive', 'lastUploadTime'], (result) => {
+        if (result.autoUploadActive) {
+            const intervalMinutes = parseInt(uploadIntervalInput.value) || 5;
+            const intervalMs = intervalMinutes * 60 * 1000;
+            
+            // Calculate time until next upload
+            const timeSinceLastUpload = Date.now() - (result.lastUploadTime || 0);
+            const timeUntilNextUpload = Math.max(0, intervalMs - timeSinceLastUpload);
+
+            // Start the interval and trigger first upload after calculated delay
+            setTimeout(() => {
+                document.getElementById('startAutoUploadBtn').click();
+            }, timeUntilNextUpload);
         }
     });
 
