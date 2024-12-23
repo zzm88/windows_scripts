@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Xiaohongshu Comment Extractor",
+  "version": "1.0",
+  "description": "Extract comments from Xiaohongshu posts",
+  "permissions": ["clipboardWrite"],
+  "content_scripts": [
+    {
+      "matches": ["*://*.xiaohongshu.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "web_accessible_resources": [{
+    "resources": ["ui.html"],
+    "matches": ["*://*.xiaohongshu.com/*"]
+  }],
+  "icons": {
+    "128": "icon.png"
+  }
+} 

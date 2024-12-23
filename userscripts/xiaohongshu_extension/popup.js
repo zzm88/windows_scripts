@@ -60,20 +60,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Auto upload functionality
     let autoUploadInterval;
+    let countdownInterval;
+
+    function updateCountdown(nextUploadTime) {
+        const countdownDisplay = document.getElementById('countdownDisplay');
+        const countdownTime = document.getElementById('countdownTime');
+        
+        if (!nextUploadTime) {
+            countdownDisplay.style.display = 'none';
+            return;
+        }
+
+        countdownDisplay.style.display = 'block';
+        
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+        }
+
+        countdownInterval = setInterval(() => {
+            const now = Date.now();
+            const timeLeft = nextUploadTime - now;
+            
+            if (timeLeft <= 0) {
+                countdownTime.textContent = 'Uploading...';
+                return;
+            }
+
+            const minutes = Math.floor(timeLeft / 60000);
+            const seconds = Math.floor((timeLeft % 60000) / 1000);
+            countdownTime.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }, 1000);
+    }
 
     document.getElementById('startAutoUploadBtn').addEventListener('click', () => {
         const intervalMinutes = parseInt(uploadIntervalInput.value) || 5;
         const intervalMs = intervalMinutes * 60 * 1000;
+        const nextUploadTime = Date.now() + intervalMs;
 
         // Store the interval ID in chrome.storage to persist it
         autoUploadInterval = setInterval(() => {
             document.getElementById('uploadBtn').click();
+            updateCountdown(Date.now() + intervalMs);
         }, intervalMs);
 
         chrome.storage.local.set({
             autoUploadActive: true,
-            lastUploadTime: Date.now()
+            lastUploadTime: Date.now(),
+            nextUploadTime: nextUploadTime
         });
+
+        // Start countdown
+        updateCountdown(nextUploadTime);
 
         // Trigger first upload immediately
         document.getElementById('uploadBtn').click();
@@ -84,25 +121,44 @@ document.addEventListener('DOMContentLoaded', () => {
             clearInterval(autoUploadInterval);
             autoUploadInterval = null;
         }
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+        updateCountdown(null);
         chrome.storage.local.set({
-            autoUploadActive: false
+            autoUploadActive: false,
+            nextUploadTime: null
         });
     });
 
     // Check if auto upload was active before popup was closed
-    chrome.storage.local.get(['autoUploadActive', 'lastUploadTime'], (result) => {
-        if (result.autoUploadActive) {
-            const intervalMinutes = parseInt(uploadIntervalInput.value) || 5;
-            const intervalMs = intervalMinutes * 60 * 1000;
-            
-            // Calculate time until next upload
-            const timeSinceLastUpload = Date.now() - (result.lastUploadTime || 0);
-            const timeUntilNextUpload = Math.max(0, intervalMs - timeSinceLastUpload);
+    chrome.storage.local.get(['autoUploadActive', 'lastUploadTime', 'nextUploadTime'], (result) => {
+        if (result.autoUploadActive && result.nextUploadTime) {
+            const now = Date.now();
+            if (result.nextUploadTime > now) {
+                // Resume countdown
+                updateCountdown(result.nextUploadTime);
+                
+                // Restart the auto upload interval
+                const intervalMinutes = parseInt(uploadIntervalInput.value) || 5;
+                const intervalMs = intervalMinutes * 60 * 1000;
+                
+                autoUploadInterval = setInterval(() => {
+                    document.getElementById('uploadBtn').click();
+                    updateCountdown(Date.now() + intervalMs);
+                }, intervalMs);
 
-            // Start the interval and trigger first upload after calculated delay
-            setTimeout(() => {
+                // Schedule the next upload
+                const timeUntilNextUpload = result.nextUploadTime - now;
+                setTimeout(() => {
+                    document.getElementById('uploadBtn').click();
+                    updateCountdown(Date.now() + intervalMs);
+                }, timeUntilNextUpload);
+            } else {
+                // If we missed the upload time, start fresh
                 document.getElementById('startAutoUploadBtn').click();
-            }, timeUntilNextUpload);
+            }
         }
     });
 

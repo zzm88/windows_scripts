@@ -609,7 +609,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
       
       // Find and click the submit button
-      const submitButton = document.querySelector('.header-icon');
+      const submitButton = document.querySelector('button.red.publishBtn');
       if (submitButton) {
           submitButton.click();
           console.log('Submit button clicked successfully');
