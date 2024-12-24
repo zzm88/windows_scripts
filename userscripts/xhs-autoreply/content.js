@@ -86,6 +86,147 @@ function removeExistingUI() {
   }
 }
 
+// Helper function to simulate random delay
+function randomDelay(min, max) {
+  const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+  return new Promise(resolve => setTimeout(resolve, delay));
+}
+
+// Helper function to simulate keyboard events
+function simulateKeyboardEvent(element, eventType, key = '') {
+  const event = new KeyboardEvent(eventType, {
+    key: key,
+    code: `Key${key.toUpperCase()}`,
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    keyCode: key.charCodeAt(0),
+    which: key.charCodeAt(0)
+  });
+  element.dispatchEvent(event);
+}
+
+// Helper function to simulate typing
+async function simulateTyping(element, text) {
+  // First, focus the element
+  element.focus();
+  simulateKeyboardEvent(element, 'keydown');
+  await randomDelay(100, 200);
+
+  // Clear existing content
+  element.textContent = '';
+  
+  // Type each character with random delay
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    
+    // Simulate keydown
+    simulateKeyboardEvent(element, 'keydown', char);
+    await randomDelay(50, 150);
+    
+    // Add the character
+    element.textContent += char;
+    
+    // Simulate keyup
+    simulateKeyboardEvent(element, 'keyup', char);
+    
+    // Trigger input event
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    
+    // Random delay between characters
+    await randomDelay(50, 150);
+  }
+
+  // Final input event
+  element.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+// Helper function to wait for element
+async function waitForElement(selector, maxAttempts = 10, interval = 500) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const element = document.querySelector(selector);
+    if (element && element.offsetParent !== null) { // Check if element exists and is visible
+      return element;
+    }
+    await new Promise(resolve => setTimeout(resolve, interval));
+  }
+  throw new Error(`Element ${selector} not found or not visible after ${maxAttempts} attempts`);
+}
+
+// Updated auto-reply function
+async function autoReply(responseText) {
+  try {
+    // Step 1: Find and click the initial comment input area
+    console.log('Step 1: Finding initial comment area...');
+    const initialCommentArea = document.querySelector('div.inner');
+    if (!initialCommentArea) {
+      throw new Error('Initial comment area not found');
+    }
+    console.log('Clicking initial comment area...');
+    initialCommentArea.click();
+    await randomDelay(800, 1200);
+
+    // Step 2: Wait for textarea to appear and be visible
+    console.log('Step 2: Waiting for textarea...');
+    const textarea = await waitForElement('#content-textarea');
+    console.log('Textarea found:', textarea);
+    await randomDelay(500, 800);
+
+    // Step 3: Click and focus the textarea
+    console.log('Step 3: Focusing textarea...');
+    textarea.click();
+    await randomDelay(300, 500);
+    textarea.focus();
+    await randomDelay(300, 500);
+
+    // Step 4: Simulate typing
+    console.log('Step 4: Typing response...');
+    await simulateTyping(textarea, responseText);
+    await randomDelay(500, 1000);
+
+    // Step 5: Find and prepare submit button
+    console.log('Step 5: Preparing submit button...');
+    const submitButton = await waitForElement('button.btn.submit');
+    if (!submitButton) {
+      throw new Error('Submit button not found');
+    }
+
+    // Step 6: Enable and click submit button
+    console.log('Step 6: Submitting response...');
+    submitButton.removeAttribute('disabled');
+    await randomDelay(500, 800);
+    
+    // Simulate mouse events on submit button
+    submitButton.dispatchEvent(new MouseEvent('mouseover', {
+      bubbles: true,
+      cancelable: true,
+      view: window
+    }));
+    await randomDelay(100, 200);
+    
+    submitButton.dispatchEvent(new MouseEvent('mousedown', {
+      bubbles: true,
+      cancelable: true,
+      view: window
+    }));
+    await randomDelay(50, 100);
+    
+    submitButton.dispatchEvent(new MouseEvent('mouseup', {
+      bubbles: true,
+      cancelable: true,
+      view: window
+    }));
+    await randomDelay(50, 100);
+    
+    submitButton.click();
+
+    return true;
+  } catch (error) {
+    console.error('Auto-reply error:', error);
+    throw error;
+  }
+}
+
 // Create and inject UI
 async function createExtensionUI() {
   // Remove any existing UI first
@@ -113,6 +254,7 @@ async function createExtensionUI() {
   const prompt2 = document.getElementById('prompt2');
   const callApiBtn = document.getElementById('callApiBtn');
   const apiResponse = document.getElementById('apiResponse');
+  const autoReplyBtn = document.getElementById('autoReplyBtn');
 
   let isCollapsed = false;
   let currentComments = [];
@@ -220,6 +362,7 @@ async function createExtensionUI() {
       callApiBtn.disabled = true;
       apiResponse.textContent = 'Waiting for API response...';
       apiResponse.style.display = 'block';
+      autoReplyBtn.style.display = 'none';
 
       const response = await callApi(
         apiAddress.value,
@@ -230,11 +373,37 @@ async function createExtensionUI() {
       );
 
       apiResponse.textContent = response;
+      // Show auto-reply button after successful API call
+      autoReplyBtn.style.display = 'block';
     } catch (error) {
       apiResponse.textContent = `Error: ${error.message}`;
     } finally {
       callApiBtn.textContent = 'Call API';
       callApiBtn.disabled = false;
+    }
+  });
+
+  // Add auto-reply button handler
+  autoReplyBtn.addEventListener('click', async () => {
+    try {
+      autoReplyBtn.textContent = 'Replying...';
+      autoReplyBtn.disabled = true;
+
+      await autoReply(apiResponse.textContent);
+
+      autoReplyBtn.textContent = 'Reply Sent!';
+      setTimeout(() => {
+        autoReplyBtn.textContent = 'Auto Reply';
+        autoReplyBtn.disabled = false;
+      }, 2000);
+    } catch (error) {
+      console.error('Auto-reply error:', error);
+      autoReplyBtn.textContent = 'Reply Failed';
+      apiResponse.textContent += '\n\nAuto-reply failed: ' + error.message;
+      setTimeout(() => {
+        autoReplyBtn.textContent = 'Auto Reply';
+        autoReplyBtn.disabled = false;
+      }, 2000);
     }
   });
 }
