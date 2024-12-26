@@ -1,30 +1,48 @@
 // Load saved configuration from storage
 function loadConfig() {
   const config = {
+    apiProvider: localStorage.getItem('xhs_api_provider') || 'deepseek',
     apiAddress: localStorage.getItem('xhs_api_address') || 'https://api.deepseek.com/chat/completions',
-    apiKey: localStorage.getItem('xhs_api_key') || 'sk-91b44bc0e0d445b49757738c7e8acf3a',
+    deepseekApiKey: localStorage.getItem('xhs_deepseek_api_key') || 'sk-91b44bc0e0d445b49757738c7e8acf3a',
+    geminiApiKey: localStorage.getItem('xhs_gemini_api_key') || '',
     prompt1: localStorage.getItem('xhs_prompt1') || '',
-    prompt2: localStorage.getItem('xhs_prompt2') || ''
+    prompt2: localStorage.getItem('xhs_prompt2') || '',
+    autoReplyEnabled: localStorage.getItem('xhs_auto_reply_enabled') === 'true',
+    replyFrequency: localStorage.getItem('xhs_reply_frequency') || '1.0'
   };
   return config;
 }
 
 // Save configuration to storage
 function saveConfig(config) {
+  localStorage.setItem('xhs_api_provider', config.apiProvider);
   localStorage.setItem('xhs_api_address', config.apiAddress);
-  localStorage.setItem('xhs_api_key', config.apiKey);
+  localStorage.setItem('xhs_deepseek_api_key', config.deepseekApiKey);
+  localStorage.setItem('xhs_gemini_api_key', config.geminiApiKey);
   localStorage.setItem('xhs_prompt1', config.prompt1);
   localStorage.setItem('xhs_prompt2', config.prompt2);
+  localStorage.setItem('xhs_auto_reply_enabled', config.autoReplyEnabled);
+  localStorage.setItem('xhs_reply_frequency', config.replyFrequency);
 }
 
 // Call the API with prompts and comments
 async function callApi(apiAddress, apiKey, prompt1, prompt2, comments) {
+  const config = loadConfig();
   console.log('API Call Inputs:', {
+    provider: config.apiProvider,
     prompt1: prompt1,
     prompt2: prompt2,
     commentsCount: comments.length
   });
 
+  // Use the correct API key based on provider
+  const effectiveApiKey = config.apiProvider === 'gemini' ? config.geminiApiKey : config.deepseekApiKey;
+
+  if (config.apiProvider === 'gemini') {
+    return await callGeminiApi(effectiveApiKey, prompt1, prompt2, comments);
+  }
+
+  // DeepSeek API (default)
   const messages = [];
   
   // Always add system message with prompt1
@@ -49,14 +67,12 @@ async function callApi(apiAddress, apiKey, prompt1, prompt2, comments) {
   messages.push(userMessage);
   console.log('User Message:', userMessage);
 
-  console.log('Final API Request Messages:', JSON.stringify(messages, null, 2));
-
   try {
     const response = await fetch(apiAddress, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${effectiveApiKey}`
       },
       body: JSON.stringify({
         model: "deepseek-chat",
@@ -66,7 +82,7 @@ async function callApi(apiAddress, apiKey, prompt1, prompt2, comments) {
     });
 
     if (!response.ok) {
-      throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+      throw new Error(`DeepSeek API call failed: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
@@ -76,6 +92,37 @@ async function callApi(apiAddress, apiKey, prompt1, prompt2, comments) {
     console.error('API call error:', error);
     throw error;
   }
+}
+
+// Add function to call Gemini API
+async function callGeminiApi(apiKey, prompt1, prompt2, comments) {
+  const text = [
+    prompt1,
+    prompt2,
+    "Comments:",
+    ...comments.map(c => `${c.author}: ${c.content}`)
+  ].filter(Boolean).join('\n\n');
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{
+          text: text
+        }]
+      }]
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Gemini API call failed: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.candidates[0].content.parts[0].text;
 }
 
 // Function to remove existing UI
@@ -89,7 +136,7 @@ function removeExistingUI() {
 // Helper function to simulate random delay
 function randomDelay(min, max) {
   const delay = Math.floor(Math.random() * (max - min + 1)) + min;
-  return new Promise(resolve => setTimeout(resolve, delay));
+  return new Promise(resolve => setTimeout(resolve, delay / browseSpeed));
 }
 
 // Helper function to simulate keyboard events
@@ -227,6 +274,185 @@ async function autoReply(responseText) {
   }
 }
 
+// Add these variables at the top of the file
+let currentPostIndex = -1;
+const SELECTED_CLASS = 'post-selected';
+
+// Add these style rules to the page
+const styles = `
+  .post-selected {
+    border: 3px solid #ff2442 !important;
+    box-shadow: 0 0 10px rgba(255, 36, 66, 0.5);
+  }
+`;
+
+const styleSheet = document.createElement('style');
+styleSheet.textContent = styles;
+document.head.appendChild(styleSheet);
+
+// Add these functions for post navigation
+function focusNextPost() {
+  const posts = document.querySelectorAll('.note-item');
+  
+  // Remove previous selection
+  if (currentPostIndex >= 0 && posts[currentPostIndex]) {
+    const prevPost = posts[currentPostIndex].querySelector('.cover');
+    if (prevPost) {
+      prevPost.classList.remove(SELECTED_CLASS);
+    }
+  }
+
+  // Move to next post
+  currentPostIndex = (currentPostIndex + 1) % posts.length;
+  
+  // Add selection to new post
+  const currentPost = posts[currentPostIndex].querySelector('.cover');
+  if (currentPost) {
+    currentPost.classList.add(SELECTED_CLASS);
+    currentPost.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function clickCurrentPost() {
+  const posts = document.querySelectorAll('.note-item');
+  if (currentPostIndex >= 0 && posts[currentPostIndex]) {
+    const currentPost = posts[currentPostIndex].querySelector('.cover');
+    if (currentPost) {
+      currentPost.click();
+    }
+  }
+}
+
+// Add these variables for auto-browsing
+let isAutoBrowsing = false;
+let autoBrowseCount = 0;
+const MAX_POSTS_BEFORE_SCROLL = 5; // Scroll main feed after this many posts
+
+// Function to simulate natural scrolling
+async function simulateScroll(element, scrollAmount, duration = 1000) {
+  const start = element.scrollTop;
+  const change = scrollAmount - start;
+  const startTime = performance.now();
+  
+  function easeInOutQuad(t) {
+    return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+  }
+
+  return new Promise(resolve => {
+    function update(currentTime) {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      element.scrollTop = start + change * easeInOutQuad(progress);
+      
+      if (progress < 1) {
+        requestAnimationFrame(update);
+      } else {
+        resolve();
+      }
+    }
+    
+    requestAnimationFrame(update);
+  });
+}
+
+// Add this variable at the top with other variables
+let browseSpeed = 1;
+
+// Update the randomDelay function to consider speed
+function randomDelay(min, max) {
+  const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+  return new Promise(resolve => setTimeout(resolve, delay / browseSpeed));
+}
+
+// Add function to determine if we should reply based on frequency
+function shouldReplyBasedOnFrequency(frequency) {
+  const randomValue = Math.random();
+  return randomValue < parseFloat(frequency);
+}
+
+// Update browsePost function
+async function browsePost() {
+  try {
+    // Click the post
+    await clickCurrentPost();
+    await randomDelay(3000, 4000);
+
+    // Find the note scroller
+    const scroller = document.querySelector('.note-scroller');
+    if (scroller) {
+      const scrollAmount = Math.floor(scroller.scrollHeight * (0.5 + Math.random() * 0.5));
+      await simulateScroll(scroller, scrollAmount, 3000 / browseSpeed);
+      await randomDelay(2000, 3000);
+    }
+
+    // Check if auto-reply is enabled
+    const toggleAutoReply = document.getElementById('toggleAutoReply');
+    const replyFrequency = document.getElementById('replyFrequency');
+    
+    if (toggleAutoReply && toggleAutoReply.checked) {
+      // Check if we should reply based on frequency
+      if (shouldReplyBasedOnFrequency(replyFrequency.value)) {
+        try {
+          console.log('Attempting reply based on frequency:', replyFrequency.value);
+          const comments = extractComments();
+          if (comments.length > 0) {
+            const config = loadConfig();
+            const response = await callApi(
+              config.apiAddress,
+              '', // API key is now handled inside callApi
+              config.prompt1,
+              config.prompt2,
+              comments
+            );
+            await autoReply(response);
+            await randomDelay(2000, 3000);
+          }
+        } catch (error) {
+          console.error('Auto-reply during browsing failed:', error);
+        }
+      } else {
+        console.log('Skipping reply based on frequency:', replyFrequency.value);
+      }
+    }
+
+    // Find and click close button
+    const closeButton = document.querySelector('.close-circle');
+    if (closeButton) {
+      closeButton.click();
+      await randomDelay(2000, 3000); // Wait for post to close
+    }
+
+    // Move to next post
+    focusNextPost();
+    autoBrowseCount++;
+
+    // Check if we need to scroll the main feed
+    if (autoBrowseCount % MAX_POSTS_BEFORE_SCROLL === 0) {
+      const mainContainer = document.getElementById('mfContainer');
+      if (mainContainer) {
+        console.log('Scrolling main feed to load more posts...');
+        await simulateScroll(mainContainer, mainContainer.scrollHeight, 4000 / browseSpeed);
+        await randomDelay(3000, 4000); // Wait for new posts to load
+      }
+    }
+
+    // Continue browsing if auto-browse is still active
+    if (isAutoBrowsing) {
+      await randomDelay(2000, 3000); // Wait between posts
+      await browsePost();
+    }
+  } catch (error) {
+    console.error('Error during auto-browsing:', error);
+    isAutoBrowsing = false;
+    const autoBrowseBtn = document.getElementById('autoBrowseBtn');
+    if (autoBrowseBtn) {
+      autoBrowseBtn.textContent = 'Start Auto Browse';
+      autoBrowseBtn.style.backgroundColor = '#9c27b0';
+    }
+  }
+}
+
 // Create and inject UI
 async function createExtensionUI() {
   // Remove any existing UI first
@@ -255,26 +481,74 @@ async function createExtensionUI() {
   const callApiBtn = document.getElementById('callApiBtn');
   const apiResponse = document.getElementById('apiResponse');
   const autoReplyBtn = document.getElementById('autoReplyBtn');
+  const nextPostBtn = document.getElementById('nextPostBtn');
+  const clickPostBtn = document.getElementById('clickPostBtn');
+  const autoBrowseBtn = document.getElementById('autoBrowseBtn');
+  const replyFrequency = document.getElementById('replyFrequency');
+  const apiProvider = document.getElementById('apiProvider');
+  const apiKeyInput = document.getElementById('apiKey');
+  const toggleAutoReply = document.getElementById('toggleAutoReply');
+  const autoReplySection = document.getElementById('autoReplySection');
 
   let isCollapsed = false;
   let currentComments = [];
 
-  // Load saved configuration
-  const config = loadConfig();
+  // Load saved configuration once
+  let config = loadConfig();
+
+  // Initialize all values from config
   apiAddress.value = config.apiAddress;
-  apiKey.value = config.apiKey;
   prompt1.value = config.prompt1;
   prompt2.value = config.prompt2;
+  apiProvider.value = config.apiProvider;
+  apiKeyInput.value = config.apiProvider === 'gemini' ? config.geminiApiKey : config.deepseekApiKey;
+  toggleAutoReply.checked = config.autoReplyEnabled;
+  autoReplySection.style.display = config.autoReplyEnabled ? 'block' : 'none';
+  replyFrequency.value = config.replyFrequency;
+
+  // Update API address and key when provider changes
+  apiProvider.addEventListener('change', (e) => {
+    const provider = e.target.value;
+    let defaultAddress = '';
+    config = loadConfig(); // Reload config to get latest values
+    
+    if (provider === 'gemini') {
+      defaultAddress = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+      apiKeyInput.value = config.geminiApiKey;
+    } else {
+      defaultAddress = 'https://api.deepseek.com/chat/completions';
+      apiKeyInput.value = config.deepseekApiKey;
+    }
+    
+    apiAddress.value = defaultAddress;
+    
+    saveConfig({
+      ...config,
+      apiProvider: provider,
+      apiAddress: defaultAddress
+    });
+  });
+
+  // Update API key save handler
+  apiKeyInput.addEventListener('change', () => {
+    config = loadConfig(); // Reload config to get latest values
+    if (apiProvider.value === 'gemini') {
+      config.geminiApiKey = apiKeyInput.value;
+    } else {
+      config.deepseekApiKey = apiKeyInput.value;
+    }
+    saveConfig(config);
+    console.log('Saved API key for provider:', apiProvider.value, 'Config:', config);
+  });
 
   // Save configuration when inputs change
-  [apiAddress, apiKey, prompt1, prompt2].forEach(input => {
+  [apiAddress, prompt1, prompt2].forEach(input => {
     input.addEventListener('change', () => {
-      saveConfig({
-        apiAddress: apiAddress.value,
-        apiKey: apiKey.value,
-        prompt1: prompt1.value,
-        prompt2: prompt2.value
-      });
+      config = loadConfig(); // Reload config to get latest values
+      if (input === apiAddress) config.apiAddress = input.value;
+      if (input === prompt1) config.prompt1 = input.value;
+      if (input === prompt2) config.prompt2 = input.value;
+      saveConfig(config);
     });
   });
 
@@ -405,6 +679,103 @@ async function createExtensionUI() {
         autoReplyBtn.disabled = false;
       }, 2000);
     }
+  });
+
+  // Add navigation button handlers
+  nextPostBtn.addEventListener('click', focusNextPost);
+  clickPostBtn.addEventListener('click', clickCurrentPost);
+
+  // Add keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'n') {
+      focusNextPost();
+    } else if (e.key === 'c') {
+      clickCurrentPost();
+    }
+  });
+
+  // Add auto-browse button handler
+  autoBrowseBtn.addEventListener('click', async () => {
+    if (isAutoBrowsing) {
+      // Stop auto-browsing
+      isAutoBrowsing = false;
+      autoBrowseBtn.textContent = 'Start Auto Browse';
+      autoBrowseBtn.style.backgroundColor = '#9c27b0';
+    } else {
+      // Start auto-browsing
+      isAutoBrowsing = true;
+      autoBrowseCount = 0;
+      autoBrowseBtn.textContent = 'Stop Auto Browse';
+      autoBrowseBtn.style.backgroundColor = '#ff5722';
+      await browsePost();
+    }
+  });
+
+  const speedSlider = document.getElementById('browseSpeed');
+  const speedValue = document.getElementById('speedValue');
+
+  // Add speed slider handler
+  speedSlider.addEventListener('input', (e) => {
+    browseSpeed = parseFloat(e.target.value);
+    speedValue.textContent = browseSpeed.toFixed(1) + 'x';
+    
+    // Save speed to localStorage
+    localStorage.setItem('xhs_browse_speed', browseSpeed);
+  });
+
+  // Load saved speed
+  const savedSpeed = localStorage.getItem('xhs_browse_speed');
+  if (savedSpeed) {
+    browseSpeed = parseFloat(savedSpeed);
+    speedSlider.value = browseSpeed;
+    speedValue.textContent = browseSpeed.toFixed(1) + 'x';
+  }
+
+  // Load auto-reply state
+  toggleAutoReply.checked = config.autoReplyEnabled;
+  autoReplySection.style.display = config.autoReplyEnabled ? 'block' : 'none';
+
+  // Add toggle handler
+  toggleAutoReply.addEventListener('change', (e) => {
+    const isEnabled = e.target.checked;
+    autoReplySection.style.display = isEnabled ? 'block' : 'none';
+    
+    // Save the state
+    saveConfig({
+      ...config,
+      autoReplyEnabled: isEnabled
+    });
+
+    // Update the switch style
+    const switchSpan = toggleAutoReply.nextElementSibling;
+    if (switchSpan) {
+      switchSpan.style.backgroundColor = isEnabled ? '#4CAF50' : '#ccc';
+      const switchDot = switchSpan.querySelector('span');
+      if (switchDot) {
+        switchDot.style.transform = isEnabled ? 'translateX(20px)' : 'translateX(0)';
+      }
+    }
+  });
+
+  // Initialize switch style
+  const switchSpan = toggleAutoReply.nextElementSibling;
+  if (switchSpan) {
+    switchSpan.style.backgroundColor = config.autoReplyEnabled ? '#4CAF50' : '#ccc';
+    const switchDot = switchSpan.querySelector('span');
+    if (switchDot) {
+      switchDot.style.transform = config.autoReplyEnabled ? 'translateX(20px)' : 'translateX(0)';
+    }
+  }
+
+  // Load saved frequency
+  replyFrequency.value = config.replyFrequency;
+
+  // Save frequency when changed
+  replyFrequency.addEventListener('change', (e) => {
+    saveConfig({
+      ...config,
+      replyFrequency: e.target.value
+    });
   });
 }
 

@@ -32,54 +32,8 @@
     </div>
   </div>
   <div id="extractorContent">
-    <div class="config-section" style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
-      <div style="margin-bottom: 8px;">
-        <label style="display: block; margin-bottom: 4px; color: #666;">API Address:</label>
-        <input type="text" id="apiAddress" style="
-          width: 100%;
-          padding: 6px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          margin-bottom: 8px;
-        " placeholder="Enter API address" value="https://api.deepseek.com/chat/completions">
-      </div>
-      <div style="margin-bottom: 8px;">
-        <label style="display: block; margin-bottom: 4px; color: #666;">API Key:</label>
-        <input type="password" id="apiKey" style="
-          width: 100%;
-          padding: 6px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          margin-bottom: 8px;
-        " placeholder="Enter API key" value="sk-91b44bc0e0d445b49757738c7e8acf3a">
-      </div>
-      <div style="margin-bottom: 8px;">
-        <label style="display: block; margin-bottom: 4px; color: #666;">Prompt 1:</label>
-        <textarea id="prompt1" style="
-          width: 100%;
-          padding: 6px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          margin-bottom: 8px;
-          height: 60px;
-          resize: vertical;
-        " placeholder="Enter first prompt"></textarea>
-      </div>
-      <div style="margin-bottom: 8px;">
-        <label style="display: block; margin-bottom: 4px; color: #666;">Prompt 2:</label>
-        <textarea id="prompt2" style="
-          width: 100%;
-          padding: 6px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          margin-bottom: 8px;
-          height: 60px;
-          resize: vertical;
-        " placeholder="Enter second prompt"></textarea>
-      </div>
-    </div>
     <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-      <button id="extractBtn" style="
+      <button id="nextPostBtn" style="
         background-color: #ff2442;
         color: white;
         border: none;
@@ -87,58 +41,215 @@
         border-radius: 4px;
         cursor: pointer;
         flex: 1;
-      ">Extract Comments</button>
-      <button id="copyBtn" style="
-        background-color: #ff2442;
+      ">Next Post (N)</button>
+      <button id="clickPostBtn" style="
+        background-color: #2442ff;
         color: white;
         border: none;
         padding: 8px 16px;
         border-radius: 4px;
         cursor: pointer;
         flex: 1;
-      ">Copy to Clipboard</button>
+      ">Click Post (C)</button>
     </div>
-    <button id="callApiBtn" style="
+    <button id="autoBrowseBtn" style="
       width: 100%;
-      background-color: #4CAF50;
+      background-color: #9c27b0;
       color: white;
       border: none;
       padding: 8px 16px;
       border-radius: 4px;
       cursor: pointer;
-      margin-bottom: 15px;
-    ">Call API</button>
-    <button id="autoReplyBtn" style="
-      width: 100%;
-      background-color: #2196F3;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-bottom: 15px;
-      display: none;
-    ">Auto Reply</button>
-    <div id="commentCount" style="
-      margin: 10px 0;
-      color: #666;
-    "></div>
-    <div id="commentList" style="
-      max-height: 300px;
-      overflow-y: auto;
-      border-top: 1px solid #eee;
-      margin-bottom: 15px;
-    "></div>
-    <div id="apiResponse" style="
-      padding: 10px;
-      background-color: #f5f5f5;
-      border-radius: 4px;
-      max-height: 200px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      font-family: monospace;
-      font-size: 12px;
-      display: none;
-    "></div>
+      margin-bottom: 8px;
+    ">Start Auto Browse</button>
+    <div style="margin-bottom: 15px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <label style="color: #666; font-size: 12px;">Browse Speed:</label>
+        <span id="speedValue" style="color: #666; font-size: 12px;">1x</span>
+      </div>
+      <input type="range" id="browseSpeed" min="0.5" max="2" step="0.1" value="1" style="
+        width: 100%;
+        margin: 0;
+      ">
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+      <label style="color: #666;">Auto Reply</label>
+      <label class="switch" style="
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+      ">
+        <input type="checkbox" id="toggleAutoReply" style="
+          opacity: 0;
+          width: 0;
+          height: 0;
+        ">
+        <span style="
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #ccc;
+          transition: .4s;
+          border-radius: 20px;
+        ">
+          <span style="
+            position: absolute;
+            content: '';
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+          "></span>
+        </span>
+      </label>
+    </div>
+    <div style="margin-bottom: 15px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <label style="color: #666; font-size: 12px;">Reply Frequency:</label>
+        <select id="replyFrequency" style="
+          padding: 4px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          background-color: white;
+        ">
+          <option value="1.0">Always (100%)</option>
+          <option value="0.75">Often (75%)</option>
+          <option value="0.5">Sometimes (50%)</option>
+          <option value="0.25">Rarely (25%)</option>
+          <option value="0.1">Very Rarely (10%)</option>
+        </select>
+      </div>
+    </div>
+    <div id="autoReplySection" style="display: none;">
+      <div class="config-section" style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+        <div style="margin-bottom: 8px;">
+          <label style="display: block; margin-bottom: 4px; color: #666;">API Provider:</label>
+          <select id="apiProvider" style="
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            background-color: white;
+          ">
+            <option value="deepseek">DeepSeek</option>
+            <option value="gemini">Google Gemini</option>
+          </select>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <label style="display: block; margin-bottom: 4px; color: #666;">API Address:</label>
+          <input type="text" id="apiAddress" style="
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 8px;
+          " placeholder="Enter API address" value="https://api.deepseek.com/chat/completions">
+        </div>
+        <div style="margin-bottom: 8px;">
+          <label style="display: block; margin-bottom: 4px; color: #666;">API Key:</label>
+          <input type="password" id="apiKey" style="
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 8px;
+          " placeholder="Enter API key" value="sk-91b44bc0e0d445b49757738c7e8acf3a">
+        </div>
+        <div style="margin-bottom: 8px;">
+          <label style="display: block; margin-bottom: 4px; color: #666;">Prompt 1:</label>
+          <textarea id="prompt1" style="
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            height: 60px;
+            resize: vertical;
+          " placeholder="Enter first prompt"></textarea>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <label style="display: block; margin-bottom: 4px; color: #666;">Prompt 2:</label>
+          <textarea id="prompt2" style="
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            height: 60px;
+            resize: vertical;
+          " placeholder="Enter second prompt"></textarea>
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+        <button id="extractBtn" style="
+          background-color: #ff2442;
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 4px;
+          cursor: pointer;
+          flex: 1;
+        ">Extract Comments</button>
+        <button id="copyBtn" style="
+          background-color: #ff2442;
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 4px;
+          cursor: pointer;
+          flex: 1;
+        ">Copy to Clipboard</button>
+      </div>
+      <button id="callApiBtn" style="
+        width: 100%;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-bottom: 15px;
+      ">Call API</button>
+      <button id="autoReplyBtn" style="
+        width: 100%;
+        background-color: #2196F3;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-bottom: 15px;
+        display: none;
+      ">Auto Reply</button>
+      <div id="commentCount" style="
+        margin: 10px 0;
+        color: #666;
+      "></div>
+      <div id="commentList" style="
+        max-height: 300px;
+        overflow-y: auto;
+        border-top: 1px solid #eee;
+        margin-bottom: 15px;
+      "></div>
+      <div id="apiResponse" style="
+        padding: 10px;
+        background-color: #f5f5f5;
+        border-radius: 4px;
+        max-height: 200px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        font-family: monospace;
+        font-size: 12px;
+        display: none;
+      "></div>
+    </div>
   </div>
 </div> 
