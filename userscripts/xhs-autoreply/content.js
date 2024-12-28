@@ -371,7 +371,7 @@ function shouldReplyBasedOnFrequency(frequency) {
   return randomValue < parseFloat(frequency);
 }
 
-// Update browsePost function
+// Update browsePost function to handle reply timing better
 async function browsePost() {
   try {
     // Click the post
@@ -390,14 +390,20 @@ async function browsePost() {
     const toggleAutoReply = document.getElementById('toggleAutoReply');
     const replyFrequency = document.getElementById('replyFrequency');
     
+    let replyInProgress = false;
+    
     if (toggleAutoReply && toggleAutoReply.checked) {
       // Check if we should reply based on frequency
       if (shouldReplyBasedOnFrequency(replyFrequency.value)) {
         try {
+          replyInProgress = true;
           console.log('Attempting reply based on frequency:', replyFrequency.value);
           const comments = extractComments();
           if (comments.length > 0) {
             const config = loadConfig();
+            
+            // First get the API response
+            console.log('Getting API response...');
             const response = await callApi(
               config.apiAddress,
               '', // API key is now handled inside callApi
@@ -405,42 +411,58 @@ async function browsePost() {
               config.prompt2,
               comments
             );
+
+            // Wait a bit before starting to reply
+            await randomDelay(1000, 2000);
+
+            // Then do the reply
+            console.log('Starting auto reply...');
             await autoReply(response);
-            await randomDelay(2000, 3000);
+
+            // Add extra delay after successful reply
+            console.log('Reply completed, waiting extra time to ensure completion...');
+            await randomDelay(3000, 4000);
           }
         } catch (error) {
           console.error('Auto-reply during browsing failed:', error);
+          // Add extra delay if reply fails to ensure UI is back to normal
+          await randomDelay(2000, 3000);
+        } finally {
+          replyInProgress = false;
         }
       } else {
         console.log('Skipping reply based on frequency:', replyFrequency.value);
       }
     }
 
-    // Find and click close button
-    const closeButton = document.querySelector('.close-circle');
-    if (closeButton) {
-      closeButton.click();
-      await randomDelay(2000, 3000); // Wait for post to close
-    }
-
-    // Move to next post
-    focusNextPost();
-    autoBrowseCount++;
-
-    // Check if we need to scroll the main feed
-    if (autoBrowseCount % MAX_POSTS_BEFORE_SCROLL === 0) {
-      const mainContainer = document.getElementById('mfContainer');
-      if (mainContainer) {
-        console.log('Scrolling main feed to load more posts...');
-        await simulateScroll(mainContainer, mainContainer.scrollHeight, 4000 / browseSpeed);
-        await randomDelay(3000, 4000); // Wait for new posts to load
+    // Only proceed with closing if reply is not in progress
+    if (!replyInProgress) {
+      // Find and click close button
+      const closeButton = document.querySelector('.close-circle');
+      if (closeButton) {
+        closeButton.click();
+        await randomDelay(2000, 3000); // Wait for post to close
       }
-    }
 
-    // Continue browsing if auto-browse is still active
-    if (isAutoBrowsing) {
-      await randomDelay(2000, 3000); // Wait between posts
-      await browsePost();
+      // Move to next post
+      focusNextPost();
+      autoBrowseCount++;
+
+      // Check if we need to scroll the main feed
+      if (autoBrowseCount % MAX_POSTS_BEFORE_SCROLL === 0) {
+        const mainContainer = document.getElementById('mfContainer');
+        if (mainContainer) {
+          console.log('Scrolling main feed to load more posts...');
+          await simulateScroll(mainContainer, mainContainer.scrollHeight, 4000 / browseSpeed);
+          await randomDelay(3000, 4000); // Wait for new posts to load
+        }
+      }
+
+      // Continue browsing if auto-browse is still active
+      if (isAutoBrowsing) {
+        await randomDelay(2000, 3000); // Wait between posts
+        await browsePost();
+      }
     }
   } catch (error) {
     console.error('Error during auto-browsing:', error);
