@@ -1,3 +1,201 @@
+// Add login state management
+let isLoggedIn = false;
+let userId = null;
+let subscriptionInfo = null;
+let currentComments = [];
+
+// Function to handle login
+async function handleLogin(username, password) {
+  try {
+    const response = await fetch('https://45.38.143.67/api/subscriptions/login/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: username,
+        password: password
+      })
+    });
+
+    const data = await response.json();
+    
+    if (data.status === 'success') {
+      // Check subscription status
+      if (!data.subscription || !data.subscription.is_active) {
+        return { 
+          success: false, 
+          message: 'Your subscription is not active. Please renew your subscription.' 
+        };
+      }
+
+      isLoggedIn = true;
+      userId = data.user_id;
+      subscriptionInfo = data.subscription;
+      
+      // Save all login info including subscription
+      localStorage.setItem('xhs_login_state', JSON.stringify({
+        isLoggedIn: true,
+        userId: data.user_id,
+        username: data.username,
+        subscription: data.subscription
+      }));
+      
+      return { 
+        success: true, 
+        message: data.message,
+        subscription: data.subscription
+      };
+    } else {
+      return { success: false, message: data.message || 'Login failed' };
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    return { success: false, message: 'Network error occurred' };
+  }
+}
+
+// Function to check login state
+async function checkLoginState() {
+  const loginState = localStorage.getItem('xhs_login_state');
+  if (loginState) {
+    const state = JSON.parse(loginState);
+    
+    // Check if we need to verify subscription
+    if (needsSubscriptionCheck()) {
+      console.log('Performing daily subscription check...');
+      const checkResult = await checkSubscription(state.username);
+      
+      if (!checkResult.success || !checkResult.subscription.is_active) {
+        handleLogout();
+        return false;
+      }
+    }
+    
+    isLoggedIn = state.isLoggedIn;
+    userId = state.userId;
+    subscriptionInfo = state.subscription;
+    
+    // Check if subscription is still active
+    if (!subscriptionInfo || !subscriptionInfo.is_active) {
+      handleLogout();
+      return false;
+    }
+    
+    // Check if subscription has expired
+    const endDate = new Date(subscriptionInfo.end_date);
+    if (endDate < new Date()) {
+      handleLogout();
+      return false;
+    }
+  }
+  return isLoggedIn;
+}
+
+// Function to create login UI
+function createLoginUI() {
+  const loginContainer = document.createElement('div');
+  loginContainer.id = 'xhs-login-container';
+  loginContainer.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 9999;
+    width: 300px;
+    font-family: Arial, sans-serif;
+  `;
+
+  loginContainer.innerHTML = `
+    <h3 style="margin: 0 0 15px 0; color: #333;">Login Required</h3>
+    <div style="margin-bottom: 15px;">
+      <input type="text" id="login-username" placeholder="Username" style="
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+      ">
+      <input type="password" id="login-password" placeholder="Password" style="
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+      ">
+      <button id="login-button" style="
+        width: 100%;
+        background-color: #ff2442;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 4px;
+        cursor: pointer;
+      ">Login</button>
+    </div>
+    <div id="login-message" style="
+      color: #666;
+      font-size: 14px;
+      text-align: center;
+      margin-bottom: 10px;
+    "></div>
+    <div id="subscription-info" style="
+      display: none;
+      background-color: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-size: 12px;
+    "></div>
+  `;
+
+  document.body.appendChild(loginContainer);
+
+  // Add login button handler
+  document.getElementById('login-button').addEventListener('click', async () => {
+    const username = document.getElementById('login-username').value;
+    const password = document.getElementById('login-password').value;
+    
+    if (!username || !password) {
+      document.getElementById('login-message').textContent = 'Please enter both username and password';
+      return;
+    }
+
+    const loginButton = document.getElementById('login-button');
+    const loginMessage = document.getElementById('login-message');
+    const subscriptionInfo = document.getElementById('subscription-info');
+    
+    loginButton.textContent = 'Logging in...';
+    loginButton.disabled = true;
+
+    const result = await handleLogin(username, password);
+    
+    if (result.success) {
+      if (result.subscription) {
+        subscriptionInfo.style.display = 'block';
+        subscriptionInfo.innerHTML = `
+          <div style="color: #4CAF50; margin-bottom: 5px;">✓ Subscription Active</div>
+          <div>Days Remaining: ${result.subscription.days_remaining}</div>
+          <div>Expires: ${new Date(result.subscription.end_date).toLocaleDateString()}</div>
+        `;
+        // Wait 2 seconds to show subscription info before proceeding
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      loginContainer.remove();
+      createExtensionUI();
+    } else {
+      loginMessage.textContent = result.message;
+      loginButton.textContent = 'Login';
+      loginButton.disabled = false;
+    }
+  });
+}
+
 // Load saved configuration from storage
 function loadConfig() {
   const config = {
@@ -25,6 +223,15 @@ function saveConfig(config) {
   localStorage.setItem('xhs_reply_frequency', config.replyFrequency);
 }
 
+// Remove displayTokenUsage function
+function displayApiResponse(content, usage = null) {
+  const apiResponse = document.getElementById('apiResponse');
+  if (!apiResponse) return;
+
+  apiResponse.style.display = 'block';
+  apiResponse.textContent = content;
+}
+
 // Call the API with prompts and comments
 async function callApi(apiAddress, apiKey, prompt1, prompt2, comments) {
   const config = loadConfig();
@@ -35,62 +242,115 @@ async function callApi(apiAddress, apiKey, prompt1, prompt2, comments) {
     commentsCount: comments.length
   });
 
-  // Use the correct API key based on provider
-  const effectiveApiKey = config.apiProvider === 'gemini' ? config.geminiApiKey : config.deepseekApiKey;
-
-  if (config.apiProvider === 'gemini') {
-    return await callGeminiApi(effectiveApiKey, prompt1, prompt2, comments);
-  }
-
-  // DeepSeek API (default)
-  const messages = [];
-  
-  // Always add system message with prompt1
-  const systemMessage = {
-    role: "system",
-    content: prompt1.trim() || "You are a helpful assistant."
-  };
-  messages.push(systemMessage);
-  console.log('System Message:', systemMessage);
-
-  // Add user message with prompt2 and comments if they exist
-  const userContent = [
-    prompt2,
-    "Comments:",
-    ...comments.map(c => `${c.author}: ${c.content}`)
-  ].filter(Boolean).join('\n\n');
-
-  const userMessage = {
-    role: "user",
-    content: userContent
-  };
-  messages.push(userMessage);
-  console.log('User Message:', userMessage);
-
-  try {
-    const response = await fetch(apiAddress, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${effectiveApiKey}`
-      },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: messages,
-        temperature: 0.7
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`DeepSeek API call failed: ${response.status} ${response.statusText}`);
+  if (config.apiProvider === 'default') {
+    // Use the proxy endpoint
+    const loginState = JSON.parse(localStorage.getItem('xhs_login_state') || '{}');
+    const username = loginState.username;
+    
+    if (!username) {
+      throw new Error('User not logged in');
     }
 
-    const data = await response.json();
-    console.log('API Response:', data);
-    return data.choices[0].message.content;
-  } catch (error) {
-    console.error('API call error:', error);
-    throw error;
+    // Combine prompts and comments into a single prompt
+    const fullPrompt = [
+      prompt1,
+      prompt2,
+      "Comments:",
+      ...comments.map(c => `${c.author}: ${c.content}`)
+    ].filter(Boolean).join('\n\n');
+
+    try {
+      const response = await fetch('https://45.38.143.67/api/subscriptions/proxy-deepseek/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: fullPrompt,
+          username: username
+        })
+      });
+
+      const data = await response.json();
+      console.log('Proxy API Response:', data);
+
+      if (data.status === 'error') {
+        // Handle subscription error
+        if (data.subscription_required) {
+          // Force a subscription check
+          const checkResult = await checkSubscription(username);
+          if (!checkResult.success || !checkResult.subscription.is_active) {
+            setTimeout(handleLogout, 1000);
+          }
+        }
+        throw new Error(data.message || 'Proxy API call failed');
+      }
+
+      // Extract the assistant's message from the successful response
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        const content = data.choices[0].message.content;
+        displayApiResponse(content);
+        return content;
+      } else {
+        throw new Error('Invalid response format from proxy API');
+      }
+    } catch (error) {
+      console.error('Proxy API call error:', error);
+      throw error;
+    }
+  } else if (config.apiProvider === 'gemini') {
+    const response = await callGeminiApi(config.geminiApiKey, prompt1, prompt2, comments);
+    displayApiResponse(response);
+    return response;
+  } else {
+    // Original DeepSeek API logic
+    const messages = [];
+    const systemMessage = {
+      role: "system",
+      content: prompt1.trim() || "You are a helpful assistant."
+    };
+    messages.push(systemMessage);
+
+    const userContent = [
+      prompt2,
+      "Comments:",
+      ...comments.map(c => `${c.author}: ${c.content}`)
+    ].filter(Boolean).join('\n\n');
+
+    const userMessage = {
+      role: "user",
+      content: userContent
+    };
+    messages.push(userMessage);
+
+    try {
+      const response = await fetch(apiAddress, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.deepseekApiKey}`
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: messages,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`DeepSeek API call failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('API Response:', data);
+      
+      const content = data.choices[0].message.content;
+      displayApiResponse(content);
+      return content;
+    } catch (error) {
+      console.error('API call error:', error);
+      throw error;
+    }
   }
 }
 
@@ -475,6 +735,126 @@ async function browsePost() {
   }
 }
 
+// Add logout function
+function handleLogout() {
+  isLoggedIn = false;
+  userId = null;
+  localStorage.removeItem('xhs_login_state');
+  document.getElementById('xhs-comment-extractor').remove();
+  createLoginUI();
+}
+
+// Add debug functions for subscription checking
+function getLastCheckInfo() {
+  const loginState = JSON.parse(localStorage.getItem('xhs_login_state') || '{}');
+  const lastCheck = loginState.lastSubscriptionCheck;
+  if (!lastCheck) return 'Never checked';
+  
+  const lastCheckDate = new Date(lastCheck);
+  const now = new Date();
+  const diffHours = Math.round((now - lastCheckDate) / (1000 * 60 * 60));
+  
+  return `Last check: ${lastCheckDate.toLocaleString()} (${diffHours} hours ago)`;
+}
+
+// Modify checkSubscription to include debug info
+async function checkSubscription(username, isDebug = false) {
+  try {
+    console.log(`[Subscription Check] Starting check for ${username}${isDebug ? ' (Debug Mode)' : ''}`);
+    console.log(`[Subscription Check] Current time: ${new Date().toLocaleString()}`);
+    console.log(`[Subscription Check] Last check: ${getLastCheckInfo()}`);
+
+    const response = await fetch('https://45.38.143.67/api/subscriptions/check-subscription/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username })
+    });
+
+    const data = await response.json();
+    console.log('[Subscription Check] Response:', data);
+    
+    if (data.status === 'success') {
+      // Update subscription info in storage
+      const loginState = JSON.parse(localStorage.getItem('xhs_login_state') || '{}');
+      loginState.subscription = data.subscription;
+      loginState.lastSubscriptionCheck = new Date().toISOString();
+      localStorage.setItem('xhs_login_state', JSON.stringify(loginState));
+      
+      return {
+        success: true,
+        subscription: data.subscription,
+        debugInfo: {
+          checkTime: new Date().toISOString(),
+          isDebugCheck: isDebug
+        }
+      };
+    } else {
+      return {
+        success: false,
+        message: data.message,
+        debugInfo: {
+          checkTime: new Date().toISOString(),
+          isDebugCheck: isDebug
+        }
+      };
+    }
+  } catch (error) {
+    console.error('[Subscription Check] Error:', error);
+    return {
+      success: false,
+      message: 'Network error occurred',
+      debugInfo: {
+        checkTime: new Date().toISOString(),
+        isDebugCheck: isDebug,
+        error: error.message
+      }
+    };
+  }
+}
+
+// Modify the subscription status display in createExtensionUI
+function updateSubscriptionDisplay(subscription, debugInfo = null) {
+  const subscriptionStatus = document.getElementById('subscription-status');
+  const lastCheckInfo = document.getElementById('last-check-info');
+  
+  if (subscription && subscription.is_active) {
+    subscriptionStatus.innerHTML = `
+      <span style="color: #4CAF50;">✓ Active</span> · 
+      <span>${subscription.days_remaining} days left</span> · 
+      <span>Expires: ${new Date(subscription.end_date).toLocaleDateString()}</span>
+    `;
+  } else {
+    subscriptionStatus.innerHTML = `
+      <span style="color: #f44336;">✗ Inactive</span>
+    `;
+  }
+
+  if (lastCheckInfo && debugInfo) {
+    lastCheckInfo.innerHTML = `
+      <div style="font-size: 11px; color: #666;">
+        ${getLastCheckInfo()}
+        ${debugInfo.isDebugCheck ? ' (Debug Check)' : ''}
+      </div>
+    `;
+  }
+}
+
+// Function to check if we need to verify subscription
+function needsSubscriptionCheck() {
+  const loginState = JSON.parse(localStorage.getItem('xhs_login_state') || '{}');
+  if (!loginState.lastSubscriptionCheck) return true;
+  
+  const lastCheck = new Date(loginState.lastSubscriptionCheck);
+  const now = new Date();
+  
+  // Check if last check was on a different day
+  return lastCheck.getDate() !== now.getDate() ||
+         lastCheck.getMonth() !== now.getMonth() ||
+         lastCheck.getFullYear() !== now.getFullYear();
+}
+
 // Create and inject UI
 async function createExtensionUI() {
   // Remove any existing UI first
@@ -489,8 +869,11 @@ async function createExtensionUI() {
   document.body.appendChild(uiContainer);
 
   // Add event listeners
+  const logoutBtn = document.getElementById('logoutBtn');
   const toggleBtn = document.getElementById('toggleExtractor');
   const reloadBtn = document.getElementById('reloadExtension');
+  const checkSubscriptionBtn = document.getElementById('checkSubscriptionBtn');
+  const debugCheckBtn = document.getElementById('debugCheckBtn');
   const content = document.getElementById('extractorContent');
   const extractBtn = document.getElementById('extractBtn');
   const copyBtn = document.getElementById('copyBtn');
@@ -511,12 +894,90 @@ async function createExtensionUI() {
   const apiKeyInput = document.getElementById('apiKey');
   const toggleAutoReply = document.getElementById('toggleAutoReply');
   const autoReplySection = document.getElementById('autoReplySection');
+  const subscriptionStatus = document.getElementById('subscription-status');
+  const lastCheckInfo = document.getElementById('last-check-info');
 
   let isCollapsed = false;
-  let currentComments = [];
 
   // Load saved configuration once
   let config = loadConfig();
+
+  // Display initial subscription information
+  const loginState = JSON.parse(localStorage.getItem('xhs_login_state') || '{}');
+  if (loginState.subscription) {
+    updateSubscriptionDisplay(loginState.subscription, {
+      checkTime: loginState.lastSubscriptionCheck,
+      isDebugCheck: false
+    });
+  }
+
+  // Add check subscription button handler
+  checkSubscriptionBtn.addEventListener('click', async () => {
+    const loginState = JSON.parse(localStorage.getItem('xhs_login_state') || '{}');
+    
+    checkSubscriptionBtn.textContent = 'Checking...';
+    checkSubscriptionBtn.disabled = true;
+    debugCheckBtn.disabled = true;
+    
+    try {
+      const result = await checkSubscription(loginState.username, false);
+      
+      if (result.success) {
+        updateSubscriptionDisplay(result.subscription, result.debugInfo);
+        
+        if (!result.subscription.is_active) {
+          setTimeout(handleLogout, 3000);
+        }
+      } else {
+        updateSubscriptionDisplay(null, result.debugInfo);
+      }
+    } catch (error) {
+      console.error('Check subscription error:', error);
+      updateSubscriptionDisplay(null, {
+        checkTime: new Date().toISOString(),
+        isDebugCheck: false,
+        error: error.message
+      });
+    } finally {
+      checkSubscriptionBtn.textContent = 'Check Subscription';
+      checkSubscriptionBtn.disabled = false;
+      debugCheckBtn.disabled = false;
+    }
+  });
+
+  // Add debug check button handler
+  debugCheckBtn.addEventListener('click', async () => {
+    const loginState = JSON.parse(localStorage.getItem('xhs_login_state') || '{}');
+    
+    debugCheckBtn.textContent = 'Checking...';
+    debugCheckBtn.disabled = true;
+    checkSubscriptionBtn.disabled = true;
+    
+    try {
+      const result = await checkSubscription(loginState.username, true);
+      
+      if (result.success) {
+        updateSubscriptionDisplay(result.subscription, result.debugInfo);
+        
+        if (!result.subscription.is_active) {
+          setTimeout(handleLogout, 3000);
+        }
+      } else {
+        updateSubscriptionDisplay(null, result.debugInfo);
+      }
+    } catch (error) {
+      console.error('Debug check error:', error);
+      updateSubscriptionDisplay(null, {
+        checkTime: new Date().toISOString(),
+        isDebugCheck: true,
+        error: error.message
+      });
+    } finally {
+      debugCheckBtn.textContent = 'Debug Check';
+      debugCheckBtn.disabled = false;
+      checkSubscriptionBtn.disabled = false;
+    }
+  });
 
   // Initialize all values from config
   apiAddress.value = config.apiAddress;
@@ -534,12 +995,18 @@ async function createExtensionUI() {
     let defaultAddress = '';
     config = loadConfig(); // Reload config to get latest values
     
-    if (provider === 'gemini') {
+    if (provider === 'default') {
+      defaultAddress = 'https://45.38.143.67/api/subscriptions/proxy-deepseek/';
+      apiKeyInput.value = '';
+      apiKeyInput.disabled = true;
+    } else if (provider === 'gemini') {
       defaultAddress = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
       apiKeyInput.value = config.geminiApiKey;
+      apiKeyInput.disabled = false;
     } else {
       defaultAddress = 'https://api.deepseek.com/chat/completions';
       apiKeyInput.value = config.deepseekApiKey;
+      apiKeyInput.disabled = false;
     }
     
     apiAddress.value = defaultAddress;
@@ -799,11 +1266,79 @@ async function createExtensionUI() {
       replyFrequency: e.target.value
     });
   });
+
+  // Add logout button handler
+  logoutBtn.addEventListener('click', handleLogout);
+
+  // Add check subscription button handler
+  checkSubscriptionBtn.addEventListener('click', async () => {
+    const loginState = JSON.parse(localStorage.getItem('xhs_login_state') || '{}');
+    const subscriptionStatus = document.getElementById('subscription-status');
+    
+    checkSubscriptionBtn.textContent = 'Checking...';
+    checkSubscriptionBtn.disabled = true;
+    
+    try {
+      const result = await checkSubscription(loginState.username);
+      
+      if (result.success) {
+        const subscription = result.subscription;
+        if (subscription.is_active) {
+          subscriptionStatus.innerHTML = `
+            <span style="color: #4CAF50;">✓ Active</span> · 
+            <span>${subscription.days_remaining} days left</span> · 
+            <span>Expires: ${new Date(subscription.end_date).toLocaleDateString()}</span>
+          `;
+        } else {
+          subscriptionStatus.innerHTML = `
+            <span style="color: #f44336;">✗ Inactive</span> · 
+            <span>${subscription.message || 'Subscription expired'}</span>
+          `;
+          // Logout after 3 seconds if subscription is inactive
+          setTimeout(handleLogout, 3000);
+        }
+      } else {
+        subscriptionStatus.innerHTML = `
+          <span style="color: #f44336;">✗ Error</span> · 
+          <span>${result.message}</span>
+        `;
+      }
+    } catch (error) {
+      subscriptionStatus.innerHTML = `
+        <span style="color: #f44336;">✗ Error</span> · 
+        <span>Failed to check subscription</span>
+      `;
+    } finally {
+      checkSubscriptionBtn.textContent = 'Check Subscription';
+      checkSubscriptionBtn.disabled = false;
+    }
+  });
+
+  // Add event listeners for token counting
+  [prompt1, prompt2].forEach(input => {
+    input.addEventListener('change', () => {
+      config = loadConfig();
+      if (input === prompt1) config.prompt1 = input.value;
+      if (input === prompt2) config.prompt2 = input.value;
+      saveConfig(config);
+    });
+  });
+
+  // Remove token-related code
+  const originalDisplayComments = displayComments;
+  displayComments = function(comments) {
+    originalDisplayComments(comments);
+  };
+
+  // Initialize all values from config
 }
 
 function displayComments(comments) {
   const commentList = document.getElementById('commentList');
   const commentCount = document.getElementById('commentCount');
+
+  // Update global currentComments
+  currentComments = comments;
 
   if (comments.length === 0) {
     commentCount.textContent = 'No comments found';
@@ -857,11 +1392,11 @@ function extractComments() {
   
   // Try multiple possible selectors for comments
   const selectors = [
-    '.comment-item',                    // Original selector
-    '.commentItem',                     // Alternative class
-    '[data-testid="comment-item"]',     // Test ID
-    '.comment-wrapper',                 // Another possible class
-    '.feed-comment'                     // Another possible class
+    '.comment-item',
+    '.commentItem',
+    '[data-testid="comment-item"]',
+    '.comment-wrapper',
+    '.feed-comment'
   ];
   
   let comments = [];
@@ -934,12 +1469,24 @@ function extractComments() {
   });
   
   console.log(`Total content extracted: ${results.length} (including note content)`);
+  
+  // Update global currentComments before returning
+  currentComments = results;
   return results;
 }
 
 // Initialize UI when the page loads
+async function initializeExtension() {
+  const isLoggedIn = await checkLoginState();
+  if (isLoggedIn) {
+    createExtensionUI();
+  } else {
+    createLoginUI();
+  }
+}
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', createExtensionUI);
+  document.addEventListener('DOMContentLoaded', initializeExtension);
 } else {
-  createExtensionUI();
+  initializeExtension();
 } 

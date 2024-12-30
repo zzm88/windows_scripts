@@ -11,8 +11,48 @@
   font-family: Arial, sans-serif;
 ">
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-    <h3 style="margin: 0; color: #333;">Comments Extractor</h3>
+    <div>
+      <h3 style="margin: 0; color: #333;">Comments Extractor</h3>
+      <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+        <div id="subscription-status" style="
+          font-size: 12px;
+          color: #4CAF50;
+        "></div>
+        <div id="last-check-info" style="
+          font-size: 11px;
+          color: #666;
+        "></div>
+        <div style="display: flex; gap: 8px;">
+          <button id="checkSubscriptionBtn" style="
+            background: none;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            color: #666;
+            cursor: pointer;
+          ">Check Subscription</button>
+          <button id="debugCheckBtn" style="
+            background: none;
+            border: 1px solid #ff9800;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            color: #ff9800;
+            cursor: pointer;
+          ">Debug Check</button>
+        </div>
+      </div>
+    </div>
     <div style="display: flex; gap: 8px;">
+      <button id="logoutBtn" style="
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 18px;
+        color: #666;
+        padding: 0 4px;
+      ">🚪</button>
       <button id="reloadExtension" style="
         background: none;
         border: none;
@@ -139,6 +179,7 @@
             margin-bottom: 8px;
             background-color: white;
           ">
+            <option value="default">Default (No API Key Required)</option>
             <option value="deepseek">DeepSeek</option>
             <option value="gemini">Google Gemini</option>
           </select>
@@ -249,6 +290,7 @@
         font-family: monospace;
         font-size: 12px;
         display: none;
+        margin-bottom: 15px;
       "></div>
     </div>
   </div>
