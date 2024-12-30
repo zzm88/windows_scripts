@@ -286,9 +286,14 @@ async function callApi(apiAddress, apiKey, prompt1, prompt2, comments) {
         throw new Error(data.message || 'Proxy API call failed');
       }
 
+      // Update token credit display if available
+      if (data.tokens_remaining !== undefined && data.token_credit !== undefined) {
+        updateTokenCreditDisplay(data.tokens_remaining, data.token_credit);
+      }
+
       // Extract the assistant's message from the successful response
-      if (data.choices && data.choices[0] && data.choices[0].message) {
-        const content = data.choices[0].message.content;
+      if (data.data && data.data.choices && data.data.choices[0] && data.data.choices[0].message) {
+        const content = data.data.choices[0].message.content;
         displayApiResponse(content);
         return content;
       } else {
@@ -855,6 +860,70 @@ function needsSubscriptionCheck() {
          lastCheck.getFullYear() !== now.getFullYear();
 }
 
+// Add token credit persistence functions
+function saveTokenCredit(tokensRemaining, tokenCredit) {
+  localStorage.setItem('xhs_token_credit', JSON.stringify({
+    tokensRemaining,
+    tokenCredit,
+    lastUpdate: new Date().toISOString()
+  }));
+}
+
+function formatLastUpdate(timestamp) {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMinutes = Math.floor((now - date) / (1000 * 60));
+  
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return date.toLocaleDateString();
+}
+
+function updateTokenCreditDisplay(tokensRemaining, tokenCredit, timestamp = new Date().toISOString()) {
+  const tokenCreditText = document.getElementById('token-credit-text');
+  const tokenCreditBar = document.getElementById('token-credit-bar');
+  const tokenCreditUpdate = document.getElementById('token-credit-update');
+  
+  if (tokenCreditText && tokenCreditBar) {
+    tokenCreditText.textContent = `${tokensRemaining.toLocaleString()} / ${tokenCredit.toLocaleString()}`;
+    const percentage = (tokensRemaining / tokenCredit) * 100;
+    tokenCreditBar.style.width = `${percentage}%`;
+    
+    // Update color based on remaining percentage
+    if (percentage > 50) {
+      tokenCreditBar.style.backgroundColor = '#4CAF50'; // Green
+    } else if (percentage > 20) {
+      tokenCreditBar.style.backgroundColor = '#FFA726'; // Orange
+    } else {
+      tokenCreditBar.style.backgroundColor = '#EF5350'; // Red
+    }
+
+    // Update last update timestamp
+    if (tokenCreditUpdate) {
+      tokenCreditUpdate.textContent = `Updated ${formatLastUpdate(timestamp)}`;
+    }
+
+    // Save the token credit info
+    saveTokenCredit(tokensRemaining, tokenCredit);
+  }
+}
+
+function loadTokenCredit() {
+  const savedCredit = localStorage.getItem('xhs_token_credit');
+  if (savedCredit) {
+    const data = JSON.parse(savedCredit);
+    updateTokenCreditDisplay(data.tokensRemaining, data.tokenCredit, data.lastUpdate);
+  }
+}
+
 // Create and inject UI
 async function createExtensionUI() {
   // Remove any existing UI first
@@ -1331,6 +1400,9 @@ async function createExtensionUI() {
   };
 
   // Initialize all values from config
+
+  // Load saved token credit after UI is created
+  loadTokenCredit();
 }
 
 function displayComments(comments) {
