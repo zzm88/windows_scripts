@@ -381,7 +381,7 @@ window.ui = {
 
   // Function to add event listeners
   addEventListeners() {
-    const config = window.api.loadConfig();
+    let config = window.api.loadConfig();
 
     // Get all UI elements
     const logoutBtn = document.getElementById('logoutBtn');
@@ -472,27 +472,30 @@ window.ui = {
         apiProvider: provider,
         apiAddress: defaultAddress
       });
+      config = window.api.loadConfig(); // Update local config after saving
     });
 
     // API key change handler
     apiKey.addEventListener('change', () => {
       config = window.api.loadConfig();
-      if (apiProvider.value === 'gemini') {
-        config.geminiApiKey = apiKey.value;
-      } else {
-        config.deepseekApiKey = apiKey.value;
-      }
-      window.api.saveConfig(config);
+      const newConfig = {
+        ...config,
+        [apiProvider.value === 'gemini' ? 'geminiApiKey' : 'deepseekApiKey']: apiKey.value
+      };
+      window.api.saveConfig(newConfig);
+      config = window.api.loadConfig(); // Update local config after saving
     });
 
     // Save configuration when inputs change
     [apiAddress, prompt1, prompt2].forEach(input => {
       input.addEventListener('change', () => {
         config = window.api.loadConfig();
-        if (input === apiAddress) config.apiAddress = input.value;
-        if (input === prompt1) config.prompt1 = input.value;
-        if (input === prompt2) config.prompt2 = input.value;
-        window.api.saveConfig(config);
+        const newConfig = { ...config };
+        if (input === apiAddress) newConfig.apiAddress = input.value;
+        if (input === prompt1) newConfig.prompt1 = input.value;
+        if (input === prompt2) newConfig.prompt2 = input.value;
+        window.api.saveConfig(newConfig);
+        config = window.api.loadConfig(); // Update local config after saving
       });
     });
 
