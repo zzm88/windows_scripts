@@ -1,7 +1,7 @@
 // UI-related functions
 window.ui = {
   currentComments: [],
-  currentLanguage: 'en', // Default language
+  currentLanguage: 'zh', // Default language to Chinese
   translations: {
     en: {
       commentsExtractor: 'Comments Extractor',
@@ -75,7 +75,8 @@ window.ui = {
       characterSaved: 'Character saved successfully',
       characterDeleted: 'Character deleted',
       enterCharacterName: 'Please enter a character name',
-      confirmDelete: 'Are you sure you want to delete this character?'
+      confirmDelete: 'Are you sure you want to delete this character?',
+      registerOrLogin: 'Register or Login'
     },
     zh: {
       commentsExtractor: '评论提取器',
@@ -149,7 +150,8 @@ window.ui = {
       characterSaved: '角色保存成功',
       characterDeleted: '角色已删除',
       enterCharacterName: '请输入角色名称',
-      confirmDelete: '确定要删除这个角色吗？'
+      confirmDelete: '确定要删除这个角色吗？',
+      registerOrLogin: '注册或登录'
     }
   },
 
@@ -253,9 +255,19 @@ window.ui = {
     `;
 
     loginContainer.innerHTML = `
-      <h3 style="margin: 0 0 15px 0; color: #333;">Login Required</h3>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin: 0; color: #333;">${this.t('loginRequired')}</h3>
+        <button id="login-lang-btn" style="
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 18px;
+          color: #666;
+          padding: 0 4px;
+        ">${this.currentLanguage === 'en' ? '🇨🇳' : '🇺🇸'}</button>
+      </div>
       <div style="margin-bottom: 15px;">
-        <input type="text" id="login-username" placeholder="Username" style="
+        <input type="text" id="login-username" placeholder="${this.t('username')}" style="
           width: 100%;
           padding: 8px;
           margin-bottom: 10px;
@@ -263,7 +275,7 @@ window.ui = {
           border-radius: 4px;
           box-sizing: border-box;
         ">
-        <input type="password" id="login-password" placeholder="Password" style="
+        <input type="password" id="login-password" placeholder="${this.t('password')}" style="
           width: 100%;
           padding: 8px;
           margin-bottom: 10px;
@@ -279,7 +291,15 @@ window.ui = {
           padding: 10px;
           border-radius: 4px;
           cursor: pointer;
-        ">Login</button>
+          margin-bottom: 10px;
+        ">${this.t('login')}</button>
+        <div style="text-align: center;">
+          <a href="https://45.38.143.67/login/" target="_blank" style="
+            color: #666;
+            text-decoration: none;
+            font-size: 12px;
+          ">${this.t('registerOrLogin')} →</a>
+        </div>
       </div>
       <div id="login-message" style="
         color: #666;
@@ -299,13 +319,21 @@ window.ui = {
 
     document.body.appendChild(loginContainer);
 
+    // Add language switch button handler
+    const langBtn = document.getElementById('login-lang-btn');
+    langBtn.addEventListener('click', () => {
+      this.switchLanguage();
+      langBtn.textContent = this.currentLanguage === 'en' ? '🇨🇳' : '🇺🇸';
+      this.updateLoginUILanguage();
+    });
+
     // Add login button handler
     document.getElementById('login-button').addEventListener('click', async () => {
       const username = document.getElementById('login-username').value;
       const password = document.getElementById('login-password').value;
       
       if (!username || !password) {
-        document.getElementById('login-message').textContent = 'Please enter both username and password';
+        document.getElementById('login-message').textContent = this.t('enterBoth');
         return;
       }
 
@@ -313,7 +341,7 @@ window.ui = {
       const loginMessage = document.getElementById('login-message');
       const subscriptionInfo = document.getElementById('subscription-info');
       
-      loginButton.textContent = 'Logging in...';
+      loginButton.textContent = this.t('loggingIn');
       loginButton.disabled = true;
 
       const result = await window.auth.handleLogin(username, password);
@@ -322,9 +350,9 @@ window.ui = {
         if (result.subscription) {
           subscriptionInfo.style.display = 'block';
           subscriptionInfo.innerHTML = `
-            <div style="color: #4CAF50; margin-bottom: 5px;">✓ Subscription Active</div>
-            <div>Days Remaining: ${result.subscription.days_remaining}</div>
-            <div>Expires: ${new Date(result.subscription.end_date).toLocaleDateString()}</div>
+            <div style="color: #4CAF50; margin-bottom: 5px;">✓ ${this.t('subscriptionActive')}</div>
+            <div>${this.t('daysRemaining')}: ${result.subscription.days_remaining}</div>
+            <div>${this.t('expires')}: ${new Date(result.subscription.end_date).toLocaleDateString()}</div>
           `;
           // Wait 2 seconds to show subscription info before proceeding
           await new Promise(resolve => setTimeout(resolve, 2000));
@@ -333,21 +361,51 @@ window.ui = {
         this.createExtensionUI();
       } else {
         loginMessage.textContent = result.message;
-        loginButton.textContent = 'Login';
+        loginButton.textContent = this.t('login');
         loginButton.disabled = false;
       }
     });
+  },
+
+  // Function to update login UI language
+  updateLoginUILanguage() {
+    const loginContainer = document.getElementById('xhs-login-container');
+    if (!loginContainer) return;
+
+    const title = loginContainer.querySelector('h3');
+    const usernameInput = document.getElementById('login-username');
+    const passwordInput = document.getElementById('login-password');
+    const loginButton = document.getElementById('login-button');
+    const loginMessage = document.getElementById('login-message');
+    const subscriptionInfo = document.getElementById('subscription-info');
+
+    if (title) title.textContent = this.t('loginRequired');
+    if (usernameInput) usernameInput.placeholder = this.t('username');
+    if (passwordInput) passwordInput.placeholder = this.t('password');
+    if (loginButton && !loginButton.disabled) loginButton.textContent = this.t('login');
+    if (loginMessage && loginMessage.textContent === this.translations.en.enterBoth) {
+      loginMessage.textContent = this.t('enterBoth');
+    }
+
+    if (subscriptionInfo && subscriptionInfo.style.display === 'block') {
+      const subscription = JSON.parse(localStorage.getItem('xhs_login_state') || '{}').subscription;
+      if (subscription) {
+        subscriptionInfo.innerHTML = `
+          <div style="color: #4CAF50; margin-bottom: 5px;">✓ ${this.t('subscriptionActive')}</div>
+          <div>${this.t('daysRemaining')}: ${subscription.days_remaining}</div>
+          <div>${this.t('expires')}: ${new Date(subscription.end_date).toLocaleDateString()}</div>
+        `;
+      }
+    }
   },
 
   // Function to create main extension UI
   async createExtensionUI() {
     this.removeExistingUI();
 
-    // Load saved language preference
+    // Load saved language preference or use Chinese as default
     const savedLanguage = localStorage.getItem('xhs_ui_language');
-    if (savedLanguage) {
-      this.currentLanguage = savedLanguage;
-    }
+    this.currentLanguage = savedLanguage || 'zh';
 
     // Fetch the UI HTML template
     const response = await fetch(chrome.runtime.getURL('ui.html'));
@@ -935,15 +993,18 @@ window.ui = {
     const subscriptionStatus = document.getElementById('subscription-status');
     const lastCheckInfo = document.getElementById('last-check-info');
     
+    // Return early if elements don't exist (e.g., in login page)
+    if (!subscriptionStatus) return;
+
     if (subscription && subscription.is_active) {
       subscriptionStatus.innerHTML = `
-        <span style="color: #4CAF50;">✓ Active</span> · 
-        <span>${subscription.days_remaining} days left</span> · 
-        <span>Expires: ${new Date(subscription.end_date).toLocaleDateString()}</span>
+        <span style="color: #4CAF50;">✓ ${this.t('active')}</span> · 
+        <span>${subscription.days_remaining} ${this.t('daysLeft')}</span> · 
+        <span>${this.t('expires')}: ${new Date(subscription.end_date).toLocaleDateString()}</span>
       `;
     } else {
       subscriptionStatus.innerHTML = `
-        <span style="color: #f44336;">✗ Inactive</span>
+        <span style="color: #f44336;">✗ ${this.t('inactive')}</span>
       `;
     }
 
@@ -951,7 +1012,7 @@ window.ui = {
       lastCheckInfo.innerHTML = `
         <div style="font-size: 11px; color: #666;">
           ${window.auth.getLastCheckInfo()}
-          ${debugInfo.isDebugCheck ? ' (Debug Check)' : ''}
+          ${debugInfo.isDebugCheck ? ` (${this.t('debugMode')})` : ''}
         </div>
       `;
     }
