@@ -65,7 +65,17 @@ window.ui = {
       lastUpdated: 'Last Updated',
       copySuccess: 'Copy Success',
       copyFailed: 'Copy Failed',
-      autoReplyFailed: 'Auto-reply failed: {error}'
+      autoReplyFailed: 'Auto-reply failed: {error}',
+      characters: 'Characters',
+      saveCharacter: 'Save Character',
+      deleteCharacter: 'Delete',
+      characterName: 'Character Name',
+      saveCurrentPrompts: 'Save Current Prompts',
+      noCharactersSaved: 'No characters saved',
+      characterSaved: 'Character saved successfully',
+      characterDeleted: 'Character deleted',
+      enterCharacterName: 'Please enter a character name',
+      confirmDelete: 'Are you sure you want to delete this character?'
     },
     zh: {
       commentsExtractor: '评论提取器',
@@ -129,7 +139,17 @@ window.ui = {
       lastUpdated: '最后更新',
       copySuccess: '复制成功',
       copyFailed: '复制失败',
-      autoReplyFailed: '自动回复失败: {error}'
+      autoReplyFailed: '自动回复失败: {error}',
+      characters: '角色管理',
+      saveCharacter: '保存角色',
+      deleteCharacter: '删除',
+      characterName: '角色名称',
+      saveCurrentPrompts: '保存当前提示词',
+      noCharactersSaved: '未保存角色',
+      characterSaved: '角色保存成功',
+      characterDeleted: '角色已删除',
+      enterCharacterName: '请输入角色名称',
+      confirmDelete: '确定要删除这个角色吗？'
     }
   },
 
@@ -423,6 +443,10 @@ window.ui = {
     autoReplySection.style.display = config.autoReplyEnabled ? 'block' : 'none';
     replyFrequency.value = config.replyFrequency;
 
+    // Load saved characters
+    this.loadCharacters();
+    this.updateCharacterList();
+
     // Load saved speed
     const savedSpeed = localStorage.getItem('xhs_browse_speed');
     if (savedSpeed) {
@@ -709,6 +733,25 @@ window.ui = {
       this.switchLanguage();
       langBtn.textContent = this.currentLanguage === 'en' ? '🇨🇳' : '🇺🇸';
     });
+
+    // Add character management event listeners
+    const saveCharacterBtn = document.getElementById('saveCharacterBtn');
+    if (saveCharacterBtn) {
+      saveCharacterBtn.addEventListener('click', () => {
+        const name = prompt(this.t('characterName'));
+        if (!name) {
+          alert(this.t('enterCharacterName'));
+          return;
+        }
+
+        this.saveCharacter(
+          name,
+          prompt1.value,
+          prompt2.value
+        );
+        alert(this.t('characterSaved'));
+      });
+    }
   },
 
   // Function to extract comments
@@ -911,6 +954,116 @@ window.ui = {
           ${debugInfo.isDebugCheck ? ' (Debug Check)' : ''}
         </div>
       `;
+    }
+  },
+
+  // Add character management functions
+  characters: [],
+
+  loadCharacters() {
+    try {
+      const savedCharacters = localStorage.getItem('xhs_characters');
+      this.characters = savedCharacters ? JSON.parse(savedCharacters) : [];
+      
+      // Ensure characters is always an array
+      if (!Array.isArray(this.characters)) {
+        console.warn('Characters data was not an array, resetting to empty array');
+        this.characters = [];
+      }
+    } catch (error) {
+      console.error('Error loading characters:', error);
+      this.characters = [];
+    }
+  },
+
+  saveCharacters() {
+    localStorage.setItem('xhs_characters', JSON.stringify(this.characters));
+  },
+
+  saveCharacter(name, prompt1, prompt2) {
+    this.characters.push({ name, prompt1, prompt2 });
+    this.saveCharacters();
+    this.updateCharacterList();
+  },
+
+  deleteCharacter(index) {
+    this.characters.splice(index, 1);
+    this.saveCharacters();
+    this.updateCharacterList();
+  },
+
+  updateCharacterList() {
+    const characterList = document.getElementById('characterList');
+    if (!characterList) return;
+
+    if (this.characters.length === 0) {
+      characterList.innerHTML = `
+        <div style="text-align: center; color: #666; padding: 10px;">
+          ${this.t('noCharactersSaved')}
+        </div>
+      `;
+      return;
+    }
+
+    // Remove existing event listeners
+    const oldCharacterList = characterList.cloneNode(false);
+    characterList.parentNode.replaceChild(oldCharacterList, characterList);
+
+    oldCharacterList.innerHTML = this.characters.map((char, index) => `
+      <div class="character-item" data-index="${index}" style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+      ">
+        <span style="font-weight: bold;">${window.utils.escapeHtml(char.name)}</span>
+        <button class="delete-character" data-index="${index}" style="
+          background: none;
+          border: 1px solid #ff2442;
+          color: #ff2442;
+          padding: 4px 8px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 12px;
+        ">${this.t('deleteCharacter')}</button>
+      </div>
+    `).join('');
+
+    // Add event listeners using event delegation
+    oldCharacterList.addEventListener('click', (e) => {
+      const characterItem = e.target.closest('.character-item');
+      const deleteButton = e.target.closest('.delete-character');
+      
+      if (deleteButton) {
+        e.stopPropagation();
+        const index = parseInt(deleteButton.dataset.index);
+        this.deleteCharacter(index);
+      } else if (characterItem) {
+        const index = parseInt(characterItem.dataset.index);
+        this.loadCharacter(index);
+      }
+    });
+  },
+
+  loadCharacter(index) {
+    const character = this.characters[index];
+    if (!character) return;
+
+    const prompt1Input = document.getElementById('prompt1');
+    const prompt2Input = document.getElementById('prompt2');
+    if (prompt1Input && prompt2Input) {
+      prompt1Input.value = character.prompt1;
+      prompt2Input.value = character.prompt2;
+      
+      // Save to config
+      const config = window.api.loadConfig();
+      window.api.saveConfig({
+        ...config,
+        prompt1: character.prompt1,
+        prompt2: character.prompt2
+      });
     }
   }
 }; 

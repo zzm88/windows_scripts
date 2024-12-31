@@ -258,6 +258,27 @@
             resize: vertical;
           " placeholder="Enter second prompt"></textarea>
         </div>
+        <div style="margin-bottom: 15px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label style="color: #666;">Characters</label>
+            <button id="saveCharacterBtn" style="
+              background: none;
+              border: 1px solid #4CAF50;
+              color: #4CAF50;
+              padding: 4px 8px;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 12px;
+            ">Save Character</button>
+          </div>
+          <div id="characterList" style="
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            margin-bottom: 8px;
+          "></div>
+        </div>
       </div>
       <div style="display: flex; gap: 8px; margin-bottom: 15px;">
         <button id="extractBtn" style="
