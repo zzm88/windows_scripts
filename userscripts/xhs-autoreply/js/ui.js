@@ -1,6 +1,211 @@
 // UI-related functions
 window.ui = {
   currentComments: [],
+  currentLanguage: 'en', // Default language
+  translations: {
+    en: {
+      commentsExtractor: 'Comments Extractor',
+      active: 'Active',
+      inactive: 'Inactive',
+      daysLeft: 'days left',
+      expires: 'Expires',
+      checkSubscription: 'Check Subscription',
+      debugCheck: 'Debug Check',
+      nextPost: 'Next Post (N)',
+      clickPost: 'Click Post (C)',
+      startAutoBrowse: 'Start Auto Browse',
+      stopAutoBrowse: 'Stop Auto Browse',
+      browseSpeed: 'Browse Speed',
+      autoReply: 'Auto Reply',
+      replyFrequency: 'Reply Frequency',
+      always: 'Always (100%)',
+      often: 'Often (75%)',
+      sometimes: 'Sometimes (50%)',
+      rarely: 'Rarely (25%)',
+      veryRarely: 'Very Rarely (10%)',
+      apiProvider: 'API Provider',
+      defaultProvider: 'Default (No API Key Required)',
+      apiAddress: 'API Address',
+      apiKey: 'API Key',
+      prompt1: 'Prompt 1',
+      prompt2: 'Prompt 2',
+      extractComments: 'Extract Comments',
+      copyToClipboard: 'Copy to Clipboard',
+      callApi: 'Call API',
+      noCommentsFound: 'No comments found',
+      noCommentsToCopy: 'No comments to copy',
+      pleaseExtractFirst: 'Please extract comments first',
+      waitingForApi: 'Waiting for API response...',
+      copied: 'Copied!',
+      replying: 'Replying...',
+      replySent: 'Reply Sent!',
+      replyFailed: 'Reply Failed',
+      originalPost: 'Original Post',
+      tokenCredit: 'Token Credit',
+      updated: 'Updated',
+      loginRequired: 'Login Required',
+      username: 'Username',
+      password: 'Password',
+      login: 'Login',
+      loggingIn: 'Logging in...',
+      enterBoth: 'Please enter both username and password',
+      subscriptionActive: 'Subscription Active',
+      daysRemaining: 'Days Remaining',
+      failedToCopy: 'Failed to copy to clipboard',
+      callingApi: 'Calling API...',
+      foundComments: 'Found {count} comments',
+      lastCheck: 'Last check',
+      hoursAgo: '{hours} hours ago',
+      debugMode: 'Debug Mode',
+      checking: 'Checking...',
+      speed: 'Speed',
+      tokenCreditInfo: 'Token Credit Info',
+      remainingTokens: 'Remaining Tokens',
+      totalTokens: 'Total Tokens',
+      lastUpdated: 'Last Updated',
+      copySuccess: 'Copy Success',
+      copyFailed: 'Copy Failed',
+      autoReplyFailed: 'Auto-reply failed: {error}'
+    },
+    zh: {
+      commentsExtractor: '评论提取器',
+      active: '已激活',
+      inactive: '未激活',
+      daysLeft: '天剩余',
+      expires: '到期时间',
+      checkSubscription: '检查订阅',
+      debugCheck: '调试检查',
+      nextPost: '下一篇 (N)',
+      clickPost: '点击帖子 (C)',
+      startAutoBrowse: '开始自动浏览',
+      stopAutoBrowse: '停止自动浏览',
+      browseSpeed: '浏览速度',
+      autoReply: '自动回复',
+      replyFrequency: '回复频率',
+      always: '总是 (100%)',
+      often: '经常 (75%)',
+      sometimes: '有时 (50%)',
+      rarely: '很少 (25%)',
+      veryRarely: '非常少 (10%)',
+      apiProvider: 'API提供商',
+      defaultProvider: '默认 (无需API密钥)',
+      apiAddress: 'API地址',
+      apiKey: 'API密钥',
+      prompt1: '提示词1',
+      prompt2: '提示词2',
+      extractComments: '提取评论',
+      copyToClipboard: '复制到剪贴板',
+      callApi: '调用API',
+      noCommentsFound: '未找到评论',
+      noCommentsToCopy: '没有可复制的评论',
+      pleaseExtractFirst: '请先提取评论',
+      waitingForApi: '等待API响应...',
+      copied: '已复制！',
+      replying: '回复中...',
+      replySent: '回复已发送！',
+      replyFailed: '回复失败',
+      originalPost: '原帖内容',
+      tokenCredit: '令牌余额',
+      updated: '更新于',
+      loginRequired: '请登录',
+      username: '用户名',
+      password: '密码',
+      login: '登录',
+      loggingIn: '登录中...',
+      enterBoth: '请输入用户名和密码',
+      subscriptionActive: '订阅已激活',
+      daysRemaining: '剩余天数',
+      failedToCopy: '复制到剪贴板失败',
+      callingApi: '调用API中...',
+      foundComments: '找到 {count} 条评论',
+      lastCheck: '上次检查',
+      hoursAgo: '{hours} 小时前',
+      debugMode: '调试模式',
+      checking: '检查中...',
+      speed: '速度',
+      tokenCreditInfo: '令牌信息',
+      remainingTokens: '剩余令牌',
+      totalTokens: '总令牌数',
+      lastUpdated: '最后更新',
+      copySuccess: '复制成功',
+      copyFailed: '复制失败',
+      autoReplyFailed: '自动回复失败: {error}'
+    }
+  },
+
+  // Function to get translated text
+  t(key) {
+    return this.translations[this.currentLanguage][key] || key;
+  },
+
+  // Function to switch language
+  switchLanguage() {
+    this.currentLanguage = this.currentLanguage === 'en' ? 'zh' : 'en';
+    localStorage.setItem('xhs_ui_language', this.currentLanguage);
+    this.updateUILanguage();
+  },
+
+  // Function to update UI language
+  updateUILanguage() {
+    const updateElementText = (selector, key, suffix = '') => {
+      const element = document.querySelector(selector);
+      if (element) {
+        element.textContent = this.t(key) + suffix;
+      }
+    };
+
+    // Update main title
+    updateElementText('#xhs-comment-extractor h3', 'commentsExtractor');
+    
+    // Update buttons
+    updateElementText('#checkSubscriptionBtn', 'checkSubscription');
+    updateElementText('#debugCheckBtn', 'debugCheck');
+    updateElementText('#nextPostBtn', 'nextPost');
+    updateElementText('#clickPostBtn', 'clickPost');
+    
+    const autoBrowseBtn = document.getElementById('autoBrowseBtn');
+    if (autoBrowseBtn) {
+      autoBrowseBtn.textContent = window.browse.isAutoBrowsing ? 
+        this.t('stopAutoBrowse') : this.t('startAutoBrowse');
+    }
+
+    // Update labels
+    updateElementText('label[for="browseSpeed"]', 'browseSpeed', ':');
+    updateElementText('label[for="toggleAutoReply"]', 'autoReply');
+    updateElementText('label[for="replyFrequency"]', 'replyFrequency', ':');
+    updateElementText('label[for="apiProvider"]', 'apiProvider', ':');
+    updateElementText('label[for="apiAddress"]', 'apiAddress', ':');
+    updateElementText('label[for="apiKey"]', 'apiKey', ':');
+    updateElementText('label[for="prompt1"]', 'prompt1', ':');
+    updateElementText('label[for="prompt2"]', 'prompt2', ':');
+
+    // Update select options
+    const replyFrequency = document.getElementById('replyFrequency');
+    if (replyFrequency) {
+      replyFrequency.options[0].textContent = this.t('always');
+      replyFrequency.options[1].textContent = this.t('often');
+      replyFrequency.options[2].textContent = this.t('sometimes');
+      replyFrequency.options[3].textContent = this.t('rarely');
+      replyFrequency.options[4].textContent = this.t('veryRarely');
+    }
+
+    const apiProvider = document.getElementById('apiProvider');
+    if (apiProvider && apiProvider.options[0]) {
+      apiProvider.options[0].textContent = this.t('defaultProvider');
+    }
+
+    // Update other buttons
+    updateElementText('#extractBtn', 'extractComments');
+    updateElementText('#copyBtn', 'copyToClipboard');
+    updateElementText('#callApiBtn', 'callApi');
+    updateElementText('#autoReplyBtn', 'autoReply');
+
+    // Update token credit label
+    updateElementText('#token-credit-info span:first-child', 'tokenCredit', ':');
+
+    // Update subscription display if exists
+    this.updateSubscriptionDisplay();
+  },
 
   // Function to remove existing UI
   removeExistingUI() {
@@ -118,16 +323,39 @@ window.ui = {
   async createExtensionUI() {
     this.removeExistingUI();
 
+    // Load saved language preference
+    const savedLanguage = localStorage.getItem('xhs_ui_language');
+    if (savedLanguage) {
+      this.currentLanguage = savedLanguage;
+    }
+
     // Fetch the UI HTML template
     const response = await fetch(chrome.runtime.getURL('ui.html'));
     const uiHTML = await response.text();
 
     const uiContainer = document.createElement('div');
     uiContainer.innerHTML = uiHTML;
+
+    // Add language switch button
+    const headerButtons = uiContainer.querySelector('#xhs-comment-extractor > div > div:last-child');
+    const langBtn = document.createElement('button');
+    langBtn.id = 'languageBtn';
+    langBtn.style.cssText = `
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: #666;
+      padding: 0 4px;
+    `;
+    langBtn.textContent = this.currentLanguage === 'en' ? '🇨🇳' : '🇺🇸';
+    headerButtons.insertBefore(langBtn, headerButtons.firstChild);
+
     document.body.appendChild(uiContainer);
 
     // Initialize all UI elements and event listeners
     this.initializeUI();
+    this.updateUILanguage();
   },
 
   // Function to initialize UI elements and event listeners
@@ -276,7 +504,7 @@ window.ui = {
 
     copyBtn.addEventListener('click', () => {
       if (this.currentComments.length === 0) {
-        commentCount.textContent = 'No comments to copy';
+        commentCount.textContent = this.t('noCommentsToCopy');
         return;
       }
 
@@ -285,28 +513,28 @@ window.ui = {
         .join('\n');
       
       navigator.clipboard.writeText(text).then(() => {
-        copyBtn.textContent = 'Copied!';
+        copyBtn.textContent = this.t('copied');
         setTimeout(() => {
-          copyBtn.textContent = 'Copy to Clipboard';
+          copyBtn.textContent = this.t('copyToClipboard');
         }, 2000);
       }).catch(error => {
         console.error('Failed to copy:', error);
-        commentCount.textContent = 'Failed to copy to clipboard';
+        commentCount.textContent = this.t('failedToCopy');
       });
     });
 
     // API call and auto-reply buttons
     callApiBtn.addEventListener('click', async () => {
       if (this.currentComments.length === 0) {
-        apiResponse.textContent = 'Please extract comments first';
+        apiResponse.textContent = this.t('pleaseExtractFirst');
         apiResponse.style.display = 'block';
         return;
       }
 
       try {
-        callApiBtn.textContent = 'Calling API...';
+        callApiBtn.textContent = this.t('callingApi');
         callApiBtn.disabled = true;
-        apiResponse.textContent = 'Waiting for API response...';
+        apiResponse.textContent = this.t('waitingForApi');
         apiResponse.style.display = 'block';
         autoReplyBtn.style.display = 'none';
 
@@ -323,29 +551,29 @@ window.ui = {
       } catch (error) {
         apiResponse.textContent = `Error: ${error.message}`;
       } finally {
-        callApiBtn.textContent = 'Call API';
+        callApiBtn.textContent = this.t('callApi');
         callApiBtn.disabled = false;
       }
     });
 
     autoReplyBtn.addEventListener('click', async () => {
       try {
-        autoReplyBtn.textContent = 'Replying...';
+        autoReplyBtn.textContent = this.t('replying');
         autoReplyBtn.disabled = true;
 
         await window.browse.autoReply(apiResponse.textContent);
 
-        autoReplyBtn.textContent = 'Reply Sent!';
+        autoReplyBtn.textContent = this.t('replySent');
         setTimeout(() => {
-          autoReplyBtn.textContent = 'Auto Reply';
+          autoReplyBtn.textContent = this.t('autoReply');
           autoReplyBtn.disabled = false;
         }, 2000);
       } catch (error) {
         console.error('Auto-reply error:', error);
-        autoReplyBtn.textContent = 'Reply Failed';
-        apiResponse.textContent += '\n\nAuto-reply failed: ' + error.message;
+        autoReplyBtn.textContent = this.t('replyFailed');
+        apiResponse.textContent += '\n\n' + this.t('autoReplyFailed').replace('{error}', error.message);
         setTimeout(() => {
-          autoReplyBtn.textContent = 'Auto Reply';
+          autoReplyBtn.textContent = this.t('autoReply');
           autoReplyBtn.disabled = false;
         }, 2000);
       }
@@ -400,7 +628,7 @@ window.ui = {
     checkSubscriptionBtn.addEventListener('click', async () => {
       const loginState = JSON.parse(localStorage.getItem('xhs_login_state') || '{}');
       
-      checkSubscriptionBtn.textContent = 'Checking...';
+      checkSubscriptionBtn.textContent = this.t('checking');
       checkSubscriptionBtn.disabled = true;
       debugCheckBtn.disabled = true;
       
@@ -424,7 +652,7 @@ window.ui = {
           error: error.message
         });
       } finally {
-        checkSubscriptionBtn.textContent = 'Check Subscription';
+        checkSubscriptionBtn.textContent = this.t('checkSubscription');
         checkSubscriptionBtn.disabled = false;
         debugCheckBtn.disabled = false;
       }
@@ -433,7 +661,7 @@ window.ui = {
     debugCheckBtn.addEventListener('click', async () => {
       const loginState = JSON.parse(localStorage.getItem('xhs_login_state') || '{}');
       
-      debugCheckBtn.textContent = 'Checking...';
+      debugCheckBtn.textContent = this.t('checking');
       debugCheckBtn.disabled = true;
       checkSubscriptionBtn.disabled = true;
       
@@ -457,7 +685,7 @@ window.ui = {
           error: error.message
         });
       } finally {
-        debugCheckBtn.textContent = 'Debug Check';
+        debugCheckBtn.textContent = this.t('debugCheck');
         debugCheckBtn.disabled = false;
         checkSubscriptionBtn.disabled = false;
       }
@@ -470,6 +698,13 @@ window.ui = {
       } else if (e.key === 'c') {
         window.browse.clickCurrentPost();
       }
+    });
+
+    // Add language button handler
+    const langBtn = document.getElementById('languageBtn');
+    langBtn.addEventListener('click', () => {
+      this.switchLanguage();
+      langBtn.textContent = this.currentLanguage === 'en' ? '🇨🇳' : '🇺🇸';
     });
   },
 

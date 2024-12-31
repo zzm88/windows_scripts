@@ -134,7 +134,7 @@
     ">Start Auto Browse</button>
     <div style="margin-bottom: 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-        <label style="color: #666; font-size: 12px;">Browse Speed:</label>
+        <label for="browseSpeed" style="color: #666; font-size: 12px;">Browse Speed:</label>
         <span id="speedValue" style="color: #666; font-size: 12px;">1x</span>
       </div>
       <input type="range" id="browseSpeed" min="0.5" max="2" step="0.1" value="1" style="
@@ -143,7 +143,7 @@
       ">
     </div>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-      <label style="color: #666;">Auto Reply</label>
+      <label for="toggleAutoReply" style="color: #666;">Auto Reply</label>
       <label class="switch" style="
         position: relative;
         display: inline-block;
@@ -162,6 +162,7 @@
           left: 0;
           right: 0;
           bottom: 0;
+          background-color: #ccc;
           transition: .4s;
           border-radius: 20px;
         ">
@@ -181,7 +182,7 @@
     </div>
     <div style="margin-bottom: 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-        <label style="color: #666; font-size: 12px;">Reply Frequency:</label>
+        <label for="replyFrequency" style="color: #666; font-size: 12px;">Reply Frequency:</label>
         <select id="replyFrequency" style="
           padding: 4px;
           border: 1px solid #ddd;
@@ -199,7 +200,7 @@
     <div id="autoReplySection" style="display: none;">
       <div class="config-section" style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
         <div style="margin-bottom: 8px;">
-          <label style="display: block; margin-bottom: 4px; color: #666;">API Provider:</label>
+          <label for="apiProvider" style="display: block; margin-bottom: 4px; color: #666;">API Provider:</label>
           <select id="apiProvider" style="
             width: 100%;
             padding: 6px;
@@ -214,27 +215,27 @@
           </select>
         </div>
         <div style="margin-bottom: 8px;">
-          <label style="display: block; margin-bottom: 4px; color: #666;">API Address:</label>
+          <label for="apiAddress" style="display: block; margin-bottom: 4px; color: #666;">API Address:</label>
           <input type="text" id="apiAddress" style="
             width: 100%;
             padding: 6px;
             border: 1px solid #ddd;
             border-radius: 4px;
             margin-bottom: 8px;
-          " placeholder="Enter API address" value="https://api.deepseek.com/chat/completions">
+          " placeholder="Enter API address">
         </div>
         <div style="margin-bottom: 8px;">
-          <label style="display: block; margin-bottom: 4px; color: #666;">API Key:</label>
+          <label for="apiKey" style="display: block; margin-bottom: 4px; color: #666;">API Key:</label>
           <input type="password" id="apiKey" style="
             width: 100%;
             padding: 6px;
             border: 1px solid #ddd;
             border-radius: 4px;
             margin-bottom: 8px;
-          " placeholder="Enter API key" value="sk-91b44bc0e0d445b49757738c7e8acf3a">
+          " placeholder="Enter API key">
         </div>
         <div style="margin-bottom: 8px;">
-          <label style="display: block; margin-bottom: 4px; color: #666;">Prompt 1:</label>
+          <label for="prompt1" style="display: block; margin-bottom: 4px; color: #666;">Prompt 1:</label>
           <textarea id="prompt1" style="
             width: 100%;
             padding: 6px;
@@ -246,7 +247,7 @@
           " placeholder="Enter first prompt"></textarea>
         </div>
         <div style="margin-bottom: 8px;">
-          <label style="display: block; margin-bottom: 4px; color: #666;">Prompt 2:</label>
+          <label for="prompt2" style="display: block; margin-bottom: 4px; color: #666;">Prompt 2:</label>
           <textarea id="prompt2" style="
             width: 100%;
             padding: 6px;
