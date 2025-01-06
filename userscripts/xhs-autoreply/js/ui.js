@@ -79,7 +79,7 @@ window.ui = {
       registerOrLogin: 'Register or Login'
     },
     zh: {
-      commentsExtractor: '评论提取器',
+      commentsExtractor: '📕自动评论',
       active: '已激活',
       inactive: '未激活',
       daysLeft: '天剩余',
@@ -88,7 +88,7 @@ window.ui = {
       debugCheck: '调试检查',
       nextPost: '下一篇 (N)',
       clickPost: '点击帖子 (C)',
-      startAutoBrowse: '开始自动浏览',
+      startAutoBrowse: '开始全自动评论',
       stopAutoBrowse: '停止自动浏览',
       browseSpeed: '浏览速度',
       autoReply: '自动回复',
@@ -102,8 +102,8 @@ window.ui = {
       defaultProvider: '默认 (无需API密钥)',
       apiAddress: 'API地址',
       apiKey: 'API密钥',
-      prompt1: '提示词1',
-      prompt2: '提示词2',
+      prompt1: '角色背景设定',
+      prompt2: '评论生成规则',
       extractComments: '提取评论',
       copyToClipboard: '复制到剪贴板',
       callApi: '调用API',
