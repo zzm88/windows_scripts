@@ -70,7 +70,7 @@
             font-size: 11px;
             color: #ff9800;
             cursor: pointer;
-          ">Debug Check</button>
+          " hidden>Debug Check</button>
         </div>
       </div>
     </div>
@@ -83,7 +83,7 @@
         color: #666;
         padding: 0 4px;
       ">🚪</button>
-      <button id="reloadExtension" style="
+      <button  hidden id="reloadExtension" style="
         background: none;
         border: none;
         cursor: pointer;
@@ -103,7 +103,7 @@
   </div>
   <div id="extractorContent">
     <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-      <button id="nextPostBtn" style="
+      <button hidden id="nextPostBtn" style="
         background-color: #ff2442;
         color: white;
         border: none;
@@ -112,7 +112,7 @@
         cursor: pointer;
         flex: 1;
       ">Next Post (N)</button>
-      <button id="clickPostBtn" style="
+      <button id="clickPostBtn" hidden style="
         background-color: #2442ff;
         color: white;
         border: none;
@@ -122,16 +122,7 @@
         flex: 1;
       ">Click Post (C)</button>
     </div>
-    <button id="autoBrowseBtn" style="
-      width: 100%;
-      background-color: #9c27b0;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-bottom: 8px;
-    ">Start Auto Browse</button>
+    
     <div style="margin-bottom: 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
         <label for="browseSpeed" style="color: #666; font-size: 12px;">Browse Speed:</label>
@@ -196,8 +187,7 @@
         </select>
       </div>
     </div>
-    <div id="autoReplySection" style="display: none;">
-      <div class="config-section" style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+     <div class="config-section" style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee;"></div>
         <div style="margin-bottom: 8px; display: none;">
           <label for="apiProvider" style="display: block; margin-bottom: 4px; color: #666;">API Provider:</label>
           <select id="apiProvider" style="
@@ -279,6 +269,9 @@
           "></div>
         </div>
       </div>
+    <div id="autoReplySection" style="display: none;">
+ 
+
       <div style="display: flex; gap: 8px; margin-bottom: 15px;">
         <button id="extractBtn" style="
           background-color: #ff2442;
@@ -343,6 +336,16 @@
         margin-bottom: 15px;
       "></div>
     </div>
+<button id="autoBrowseBtn" style="
+      width: 100%;
+      background-color: #9c27b0;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 8px;
+    ">Start Auto Browse</button>
   </div>
 </div>
 

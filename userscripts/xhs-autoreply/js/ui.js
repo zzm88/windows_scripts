@@ -16,7 +16,7 @@ window.ui = {
       startAutoBrowse: 'Start Auto Browse',
       stopAutoBrowse: 'Stop Auto Browse',
       browseSpeed: 'Browse Speed',
-      autoReply: 'Auto Reply',
+      autoReply: 'Manual Reply',
       replyFrequency: 'Reply Frequency',
       always: 'Always (100%)',
       often: 'Often (75%)',
@@ -91,7 +91,7 @@ window.ui = {
       startAutoBrowse: '开始全自动评论',
       stopAutoBrowse: '停止自动浏览',
       browseSpeed: '浏览速度',
-      autoReply: '自动回复',
+      autoReply: '半自动回复',
       replyFrequency: '回复频率',
       always: '总是 (100%)',
       often: '经常 (75%)',
@@ -106,7 +106,7 @@ window.ui = {
       prompt2: '评论生成规则',
       extractComments: '提取评论',
       copyToClipboard: '复制到剪贴板',
-      callApi: '调用API',
+      callApi: '生成评论',
       noCommentsFound: '未找到评论',
       noCommentsToCopy: '没有可复制的评论',
       pleaseExtractFirst: '请先提取评论',
@@ -118,7 +118,7 @@ window.ui = {
       originalPost: '原帖内容',
       tokenCredit: '令牌余额',
       updated: '更新于',
-      loginRequired: '请登录',
+      loginRequired: '📕自动评论｜请登录',
       username: '用户名',
       password: '密码',
       login: '登录',
@@ -151,7 +151,7 @@ window.ui = {
       characterDeleted: '角色已删除',
       enterCharacterName: '请输入角色名称',
       confirmDelete: '确定要删除这个角色吗？',
-      registerOrLogin: '注册或登录'
+      registerOrLogin: '注册'
     }
   },
 
@@ -798,7 +798,7 @@ window.ui = {
       saveCharacterBtn.addEventListener('click', () => {
         const name = prompt(this.t('characterName'));
         if (!name) {
-          alert(this.t('enterCharacterName'));
+          this.showNotification(this.t('enterCharacterName'), 'error');
           return;
         }
 
@@ -807,7 +807,7 @@ window.ui = {
           prompt1.value,
           prompt2.value
         );
-        alert(this.t('characterSaved'));
+        this.showNotification(this.t('characterSaved'), 'success');
       });
     }
   },
@@ -1163,7 +1163,7 @@ window.ui = {
       character.prompt1 = prompt1Input.value;
       character.prompt2 = prompt2Input.value;
       this.saveCharacters();
-      alert(this.t('characterUpdated'));
+      this.showNotification(this.t('characterUpdated'), 'success');
     }
   }
 }; 
