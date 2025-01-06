@@ -1080,15 +1080,27 @@ window.ui = {
         cursor: pointer;
       ">
         <span style="font-weight: bold;">${window.utils.escapeHtml(char.name)}</span>
-        <button class="delete-character" data-index="${index}" style="
-          background: none;
-          border: 1px solid #ff2442;
-          color: #ff2442;
-          padding: 4px 8px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 12px;
-        ">${this.t('deleteCharacter')}</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="save-character" data-index="${index}" style="
+            background: none;
+            border: 1px solid #4CAF50;
+            color: #4CAF50;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: none;
+          ">${this.t('save')}</button>
+          <button class="delete-character" data-index="${index}" style="
+            background: none;
+            border: 1px solid #ff2442;
+            color: #ff2442;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+          ">${this.t('deleteCharacter')}</button>
+        </div>
       </div>
     `).join('');
 
@@ -1096,14 +1108,27 @@ window.ui = {
     oldCharacterList.addEventListener('click', (e) => {
       const characterItem = e.target.closest('.character-item');
       const deleteButton = e.target.closest('.delete-character');
+      const saveButton = e.target.closest('.save-character');
       
       if (deleteButton) {
         e.stopPropagation();
-        const index = parseInt(deleteButton.dataset.index);
-        this.deleteCharacter(index);
+        if (confirm(this.t('confirmDelete'))) {
+          const index = parseInt(deleteButton.dataset.index);
+          this.deleteCharacter(index);
+        }
+      } else if (saveButton) {
+        e.stopPropagation();
+        const index = parseInt(saveButton.dataset.index);
+        this.updateCharacter(index);
       } else if (characterItem) {
         const index = parseInt(characterItem.dataset.index);
         this.loadCharacter(index);
+        
+        // Hide all save buttons first
+        oldCharacterList.querySelectorAll('.save-character').forEach(btn => btn.style.display = 'none');
+        // Show save button for selected character
+        const saveButton = characterItem.querySelector('.save-character');
+        if (saveButton) saveButton.style.display = 'block';
       }
     });
   },
@@ -1125,6 +1150,20 @@ window.ui = {
         prompt1: character.prompt1,
         prompt2: character.prompt2
       });
+    }
+  },
+
+  updateCharacter(index) {
+    const character = this.characters[index];
+    if (!character) return;
+
+    const prompt1Input = document.getElementById('prompt1');
+    const prompt2Input = document.getElementById('prompt2');
+    if (prompt1Input && prompt2Input) {
+      character.prompt1 = prompt1Input.value;
+      character.prompt2 = prompt2Input.value;
+      this.saveCharacters();
+      alert(this.t('characterUpdated'));
     }
   }
 }; 
