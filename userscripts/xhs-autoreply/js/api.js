@@ -1,10 +1,23 @@
 // API-related functions
+
+// Configuration object for API settings
+window.apiConfig = {
+  baseDomain: localStorage.getItem('xhs_base_domain') || 'rednote.online',
+  setBaseDomain(domain) {
+    this.baseDomain = domain;
+    localStorage.setItem('xhs_base_domain', domain);
+  },
+  getBaseUrl() {
+    return `https://${this.baseDomain}`;
+  }
+};
+
 window.api = {
   // Load saved configuration from storage
   loadConfig() {
     const config = {
       apiProvider: localStorage.getItem('xhs_api_provider') || 'default',
-      apiAddress: localStorage.getItem('xhs_api_address') || 'https://45.38.143.67/api/subscriptions/proxy-deepseek/',
+      apiAddress: localStorage.getItem('xhs_api_address') || `${window.apiConfig.getBaseUrl()}/api/subscriptions/proxy-deepseek/`,
       deepseekApiKey: localStorage.getItem('xhs_deepseek_api_key') || '',
       geminiApiKey: localStorage.getItem('xhs_gemini_api_key') || '',
       prompt1: localStorage.getItem('xhs_prompt1') || '',
@@ -63,7 +76,7 @@ window.api = {
     ].filter(Boolean).join('\n\n');
 
     try {
-      const response = await fetch('https://45.38.143.67/api/subscriptions/proxy-deepseek/', {
+      const response = await fetch(`${window.apiConfig.getBaseUrl()}/api/subscriptions/proxy-deepseek/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

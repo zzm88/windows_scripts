@@ -7,7 +7,7 @@ window.auth = {
     // Function to handle login
     async handleLogin(username, password) {
       try {
-        const response = await fetch('https://45.38.143.67/api/subscriptions/login/', {
+        const response = await fetch(`${window.apiConfig.getBaseUrl()}/api/subscriptions/login/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -24,8 +24,8 @@ window.auth = {
           // Check subscription status
           if (!data.subscription || !data.subscription.is_active) {
             return { 
-              success: false, 
-              message: 'Your subscription is not active. Please renew your subscription.' 
+              success: false,
+              message: `您的订阅已过期。请<a href="${window.apiConfig.getBaseUrl()}" target="_blank">点击这里</a>续费。`
             };
           }
   
@@ -113,7 +113,7 @@ window.auth = {
         console.log(`[Subscription Check] Current time: ${new Date().toLocaleString()}`);
         console.log(`[Subscription Check] Last check: ${this.getLastCheckInfo()}`);
   
-        const response = await fetch('https://45.38.143.67/api/subscriptions/check-subscription/', {
+        const response = await fetch(`${window.apiConfig.getBaseUrl()}/api/subscriptions/check-subscription/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

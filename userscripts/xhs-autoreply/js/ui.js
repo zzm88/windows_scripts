@@ -118,7 +118,7 @@ window.ui = {
       originalPost: '原帖内容',
       tokenCredit: '令牌余额',
       updated: '更新于',
-      loginRequired: '📕自动评论｜请登录',
+      loginRequired: '📕自动评论',
       username: '用户名',
       password: '密码',
       login: '登录',
@@ -294,7 +294,7 @@ window.ui = {
           margin-bottom: 10px;
         ">${this.t('login')}</button>
         <div style="text-align: center;">
-          <a href="https://45.38.143.67/login/" target="_blank" style="
+          <a href="${window.apiConfig.getBaseUrl()}/login/" target="_blank" style="
             color: #666;
             text-decoration: none;
             font-size: 12px;
@@ -535,7 +535,7 @@ window.ui = {
       config = window.api.loadConfig();
       
       if (provider === 'default') {
-        defaultAddress = 'https://45.38.143.67/api/subscriptions/proxy-deepseek/';
+        defaultAddress = `${window.apiConfig.getBaseUrl()}/api/subscriptions/proxy-deepseek/`;
         apiKey.value = '';
         apiKey.disabled = true;
       } else if (provider === 'gemini') {
