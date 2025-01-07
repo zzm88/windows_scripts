@@ -447,6 +447,37 @@ window.ui = {
 
     document.body.appendChild(uiContainer);
 
+    // Add max-height and scrolling to the UI container
+    const container = document.getElementById('xhs-comment-extractor');
+    if (container) {
+      container.style.maxHeight = '800px';
+      container.style.overflowY = 'auto';
+      // Add some padding to account for scrollbar
+      container.style.paddingRight = '20px';
+      // Ensure the scrollbar looks good across browsers
+      container.style.scrollbarWidth = 'thin';
+      container.style.scrollbarColor = '#ff2442 #f5f5f5';
+      // Add webkit scrollbar styles for Chrome/Safari
+      const styleSheet = document.createElement('style');
+      styleSheet.textContent = `
+        #xhs-comment-extractor::-webkit-scrollbar {
+          width: 8px;
+        }
+        #xhs-comment-extractor::-webkit-scrollbar-track {
+          background: #f5f5f5;
+          border-radius: 4px;
+        }
+        #xhs-comment-extractor::-webkit-scrollbar-thumb {
+          background: #ff2442;
+          border-radius: 4px;
+        }
+        #xhs-comment-extractor::-webkit-scrollbar-thumb:hover {
+          background: #ff4d66;
+        }
+      `;
+      document.head.appendChild(styleSheet);
+    }
+
     // Initialize all UI elements and event listeners
     this.initializeUI();
     this.updateUILanguage();
@@ -515,6 +546,18 @@ window.ui = {
     apiKey.value = config.apiProvider === 'gemini' ? config.geminiApiKey : config.deepseekApiKey;
     toggleAutoReply.checked = config.autoReplyEnabled;
     autoReplySection.style.display = config.autoReplyEnabled ? 'block' : 'none';
+    
+    // Set initial text colors for auto reply toggle
+    const manualReplyText = document.getElementById('manual-reply-text');
+    const autoReplyText = document.getElementById('auto-reply-text');
+    if (config.autoReplyEnabled) {
+      manualReplyText.style.color = '#666';
+      autoReplyText.style.color = '#ff2442';
+    } else {
+      manualReplyText.style.color = '#ff2442';
+      autoReplyText.style.color = '#666';
+    }
+    
     replyFrequency.value = config.replyFrequency;
 
     // Load saved characters
@@ -710,6 +753,18 @@ window.ui = {
     toggleAutoReply.addEventListener('change', (e) => {
       const isEnabled = e.target.checked;
       autoReplySection.style.display = isEnabled ? 'block' : 'none';
+      
+      // Update text colors
+      const manualReplyText = document.getElementById('manual-reply-text');
+      const autoReplyText = document.getElementById('auto-reply-text');
+      
+      if (isEnabled) {
+        manualReplyText.style.color = '#666';
+        autoReplyText.style.color = '#ff2442';
+      } else {
+        manualReplyText.style.color = '#ff2442';
+        autoReplyText.style.color = '#666';
+      }
       
       window.api.saveConfig({
         ...config,
