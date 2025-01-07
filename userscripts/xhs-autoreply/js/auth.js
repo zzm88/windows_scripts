@@ -25,7 +25,7 @@ window.auth = {
           if (!data.subscription || !data.subscription.is_active) {
             return { 
               success: false,
-              message: `您的订阅已过期。请<a href="${window.apiConfig.getBaseUrl()}" target="_blank">点击这里</a>续费。`
+              message: `您的订阅已过期。请续费后使用`
             };
           }
   

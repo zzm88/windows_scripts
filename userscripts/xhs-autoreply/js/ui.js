@@ -254,6 +254,10 @@ window.ui = {
       font-family: Arial, sans-serif;
     `;
 
+    // Get saved credentials
+    const savedUsername = localStorage.getItem('xhs_saved_username') || '';
+    const savedPassword = localStorage.getItem('xhs_saved_password') || '';
+
     loginContainer.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <h3 style="margin: 0; color: #333;">${this.t('loginRequired')}</h3>
@@ -267,7 +271,7 @@ window.ui = {
         ">${this.currentLanguage === 'en' ? '🇨🇳' : '🇺🇸'}</button>
       </div>
       <div style="margin-bottom: 15px;">
-        <input type="text" id="login-username" placeholder="${this.t('username')}" style="
+        <input type="text" id="login-username" value="${savedUsername}" placeholder="${this.t('username')}" style="
           width: 100%;
           padding: 8px;
           margin-bottom: 10px;
@@ -275,7 +279,7 @@ window.ui = {
           border-radius: 4px;
           box-sizing: border-box;
         ">
-        <input type="password" id="login-password" placeholder="${this.t('password')}" style="
+        <input type="password" id="login-password" value="${savedPassword}" placeholder="${this.t('password')}" style="
           width: 100%;
           padding: 8px;
           margin-bottom: 10px;
@@ -325,6 +329,18 @@ window.ui = {
       this.switchLanguage();
       langBtn.textContent = this.currentLanguage === 'en' ? '🇨🇳' : '🇺🇸';
       this.updateLoginUILanguage();
+    });
+
+    // Add input event listeners to save credentials while typing
+    const usernameInput = document.getElementById('login-username');
+    const passwordInput = document.getElementById('login-password');
+
+    usernameInput.addEventListener('input', (e) => {
+      localStorage.setItem('xhs_saved_username', e.target.value);
+    });
+
+    passwordInput.addEventListener('input', (e) => {
+      localStorage.setItem('xhs_saved_password', e.target.value);
     });
 
     // Add login button handler
