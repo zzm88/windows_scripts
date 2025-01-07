@@ -56,18 +56,29 @@ window.browse = {
     // First, focus the element
     element.focus();
     window.utils.simulateKeyboardEvent(element, 'keydown');
-    await window.utils.randomDelay(100, 200);
+    await window.utils.randomDelay(500, 800);
 
     // Clear existing content
     element.textContent = '';
     
+    // Split text into individual characters (works for both Chinese and English)
+    const characters = Array.from(text);
+    
     // Type each character with random delay
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
+    for (let i = 0; i < characters.length; i++) {
+      const char = characters[i];
       
       // Simulate keydown
       window.utils.simulateKeyboardEvent(element, 'keydown', char);
-      await window.utils.randomDelay(50, 150);
+      
+      // Different delays for different types of characters
+      if (/[\u4e00-\u9fa5]/.test(char)) {  // Chinese character
+        await window.utils.randomDelay(400, 800);  // Longer delay for Chinese characters
+      } else if (['。', '，', '！', '？', '、', '.', ',', '!', '?', '\n'].includes(char)) {
+        await window.utils.randomDelay(800, 1200);  // Even longer pause at punctuation and line breaks
+      } else {  // English characters or other symbols
+        await window.utils.randomDelay(200, 400);
+      }
       
       // Add the character
       element.textContent += char;
@@ -78,12 +89,17 @@ window.browse = {
       // Trigger input event
       element.dispatchEvent(new Event('input', { bubbles: true }));
       
-      // Random delay between characters
-      await window.utils.randomDelay(50, 150);
+      // Occasional longer pause to simulate thinking
+      if (Math.random() < 0.1) {  // 10% chance
+        await window.utils.randomDelay(1000, 2000);
+      }
     }
 
     // Final input event
     element.dispatchEvent(new Event('input', { bubbles: true }));
+    
+    // Add a natural pause after finishing typing
+    await window.utils.randomDelay(3000, 5000);
   },
 
   // Function to auto-reply to current post
@@ -171,14 +187,14 @@ window.browse = {
     try {
       // Click the post
       await this.clickCurrentPost();
-      await window.utils.randomDelay(3000, 4000);
+      await window.utils.randomDelay(4500, 6000);  // Longer initial wait
 
       // Find the note scroller
       const scroller = document.querySelector('.note-scroller');
       if (scroller) {
         const scrollAmount = Math.floor(scroller.scrollHeight * (0.5 + Math.random() * 0.5));
-        await window.utils.simulateScroll(scroller, scrollAmount, 3000 / this.browseSpeed);
-        await window.utils.randomDelay(2000, 3000);
+        await window.utils.simulateScroll(scroller, scrollAmount, 4500 / this.browseSpeed);  // Slower scrolling
+        await window.utils.randomDelay(3000, 4500);  // Longer pause after scrolling
       }
 
       // Check if auto-reply is enabled
@@ -208,7 +224,7 @@ window.browse = {
               );
 
               // Wait a bit before starting to reply
-              await window.utils.randomDelay(1000, 2000);
+              await window.utils.randomDelay(2000, 3000);
 
               // Then do the reply
               console.log('Starting auto reply...');
@@ -216,12 +232,12 @@ window.browse = {
 
               // Add extra delay after successful reply
               console.log('Reply completed, waiting extra time to ensure completion...');
-              await window.utils.randomDelay(3000, 4000);
+              await window.utils.randomDelay(3000, 5000);  // Natural pause after reply
             }
           } catch (error) {
             console.error('Auto-reply during browsing failed:', error);
             // Add extra delay if reply fails to ensure UI is back to normal
-            await window.utils.randomDelay(2000, 3000);
+            await window.utils.randomDelay(3000, 4500);
           } finally {
             replyInProgress = false;
           }
@@ -236,7 +252,7 @@ window.browse = {
         const closeButton = document.querySelector('.close-circle');
         if (closeButton) {
           closeButton.click();
-          await window.utils.randomDelay(2000, 3000); // Wait for post to close
+          await window.utils.randomDelay(3000, 4500); // Longer wait for post to close
         }
 
         // Move to next post
@@ -248,14 +264,14 @@ window.browse = {
           const mainContainer = document.getElementById('mfContainer');
           if (mainContainer) {
             console.log('Scrolling main feed to load more posts...');
-            await window.utils.simulateScroll(mainContainer, mainContainer.scrollHeight, 4000 / this.browseSpeed);
-            await window.utils.randomDelay(3000, 4000); // Wait for new posts to load
+            await window.utils.simulateScroll(mainContainer, mainContainer.scrollHeight, 6000 / this.browseSpeed);  // Slower main feed scroll
+            await window.utils.randomDelay(4500, 6000); // Longer wait for new posts to load
           }
         }
 
         // Continue browsing if auto-browse is still active
         if (this.isAutoBrowsing) {
-          await window.utils.randomDelay(2000, 3000); // Wait between posts
+          await window.utils.randomDelay(3000, 4500); // Longer wait between posts
           await this.browsePost();
         }
       }
@@ -264,7 +280,7 @@ window.browse = {
       this.isAutoBrowsing = false;
       const autoBrowseBtn = document.getElementById('autoBrowseBtn');
       if (autoBrowseBtn) {
-        autoBrowseBtn.textContent = 'Start Auto Browse';
+        autoBrowseBtn.textContent = '开始自动评论';
         autoBrowseBtn.style.backgroundColor = '#9c27b0';
       }
     }

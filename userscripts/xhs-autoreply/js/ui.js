@@ -545,7 +545,8 @@ window.ui = {
     apiProvider.value = config.apiProvider;
     apiKey.value = config.apiProvider === 'gemini' ? config.geminiApiKey : config.deepseekApiKey;
     toggleAutoReply.checked = config.autoReplyEnabled;
-    autoReplySection.style.display = config.autoReplyEnabled ? 'block' : 'none';
+    autoReplySection.style.display = config.autoReplyEnabled ? 'none' : 'block';
+    autoBrowseBtn.style.display = config.autoReplyEnabled ? 'block' : 'none';
     
     // Set initial text colors for auto reply toggle
     const manualReplyText = document.getElementById('manual-reply-text');
@@ -731,12 +732,12 @@ window.ui = {
     autoBrowseBtn.addEventListener('click', async () => {
       if (window.browse.isAutoBrowsing) {
         window.browse.isAutoBrowsing = false;
-        autoBrowseBtn.textContent = 'Start Auto Browse';
+        autoBrowseBtn.textContent = '开始自动评论';
         autoBrowseBtn.style.backgroundColor = '#9c27b0';
       } else {
         window.browse.isAutoBrowsing = true;
         window.browse.autoBrowseCount = 0;
-        autoBrowseBtn.textContent = 'Stop Auto Browse';
+        autoBrowseBtn.textContent = '停止自动评论';
         autoBrowseBtn.style.backgroundColor = '#ff5722';
         await window.browse.browsePost();
       }
@@ -752,7 +753,8 @@ window.ui = {
     // Auto-reply toggle
     toggleAutoReply.addEventListener('change', (e) => {
       const isEnabled = e.target.checked;
-      autoReplySection.style.display = isEnabled ? 'block' : 'none';
+      autoReplySection.style.display = isEnabled ? 'none' : 'block';
+      autoBrowseBtn.style.display = isEnabled ? 'block' : 'none';
       
       // Update text colors
       const manualReplyText = document.getElementById('manual-reply-text');
@@ -1258,5 +1260,42 @@ window.ui = {
       this.saveCharacters();
       this.showNotification(this.t('characterUpdated'), 'success');
     }
+  },
+
+  // Function to show notification
+  showNotification(message, type = 'error', duration = 5000) {
+    // Remove any existing notification
+    const existingNotification = document.querySelector('.xhs-notification');
+    if (existingNotification) {
+      existingNotification.remove();
+    }
+
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = 'xhs-notification';
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      border-radius: 4px;
+      font-size: 14px;
+      z-index: 10000;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+      transition: opacity 0.3s;
+      background-color: ${type === 'error' ? '#ff4d4f' : '#52c41a'};
+      color: white;
+    `;
+    notification.textContent = message;
+
+    // Add to document
+    document.body.appendChild(notification);
+
+    // Remove after duration
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      setTimeout(() => notification.remove(), 300);
+    }, duration);
   }
 }; 

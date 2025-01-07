@@ -97,6 +97,17 @@ window.api = {
             setTimeout(window.auth.handleLogout, 1000);
           }
         }
+        if (data.message.includes('令牌使用限制')) {
+          // Show notification
+          window.ui.showNotification('已达到令牌使用限制，请订阅以继续使用。', 'error', 5000);
+          // Stop auto-browsing
+          window.browse.isAutoBrowsing = false;
+          const autoBrowseBtn = document.getElementById('autoBrowseBtn');
+          if (autoBrowseBtn) {
+            autoBrowseBtn.textContent = '开始自动评论';
+            autoBrowseBtn.style.backgroundColor = '#9c27b0';
+          }
+        }
         throw new Error(data.message || 'Proxy API call failed');
       }
 
