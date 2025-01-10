@@ -9,9 +9,9 @@ function escapeHtml(unsafe) {
 }
 
 // Helper function to simulate random delay
-function randomDelay(min, max) {
+function randomDelay(min, max, ignoreSpeed = false) {
   const delay = Math.floor(Math.random() * (max - min + 1)) + min;
-  return new Promise(resolve => setTimeout(resolve, delay / window.browseSpeed));
+  return new Promise(resolve => setTimeout(resolve, ignoreSpeed ? delay : delay / window.browseSpeed));
 }
 
 // Helper function to simulate keyboard events

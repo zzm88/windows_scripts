@@ -103,7 +103,7 @@
   </div>
   <div id="extractorContent">
     <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-      <button hidden id="nextPostBtn" style="
+      <button id="nextPostBtn" style="
         background-color: #ff2442;
         color: white;
         border: none;
@@ -336,6 +336,7 @@
         font-size: 12px;
         display: none;
         margin-bottom: 15px;
+        color: #333;
       "></div>
     </div>
 <button id="autoBrowseBtn" style="
@@ -402,5 +403,25 @@
 
   .switch input:focus + span {
     box-shadow: 0 0 1px #ff2442;
+  }
+
+  /* Character item styles */
+  .character-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    color: #333;
+  }
+
+  .character-item:hover {
+    background-color: #f5f5f5;
+  }
+
+  .character-item span {
+    font-weight: bold;
+    color: #333;
   }
 </style> 

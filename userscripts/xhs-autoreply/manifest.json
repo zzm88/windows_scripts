@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Xiaohongshu Comment Extractor",
+  "name": "小红书自动评论",
   "version": "1.0",
-  "description": "Extract comments from Xiaohongshu posts",
+  "description": "小红书自动浏览，AI驱动的自动评论",
   "permissions": ["clipboardWrite"],
   "content_scripts": [
     {
@@ -22,6 +22,6 @@
     "matches": ["*://*.xiaohongshu.com/*"]
   }],
   "icons": {
-    "128": "icon.png"
+    "128": "iconbook.png"
   }
 } 

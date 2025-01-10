@@ -51,34 +51,41 @@ window.browse = {
     }
   },
 
-  // Helper function to simulate typing
   async simulateTyping(element, text) {
-    // First, focus the element
+    // Constants for typing speed (all times in milliseconds)
+    const CHAR_PER_MINUTE = 1000;
+    const MS_PER_MINUTE = 60 * 1000;
+    const BASE_CHAR_DELAY = MS_PER_MINUTE / CHAR_PER_MINUTE;  // 1500ms per character for 40 chars/minute
+    
+    const PUNCTUATION_DELAY = 2000;  // Extra delay for punctuation
+    const SENTENCE_END_DELAY = 3000;  // Extra delay for end of sentences
+    const THINKING_DELAY = 5000;  // Random thinking pauses
+    
+    // Focus element
     element.focus();
     window.utils.simulateKeyboardEvent(element, 'keydown');
-    await window.utils.randomDelay(500, 800);
+    await window.utils.randomDelay(2000, 3000, true);  // Initial delay, ignore browse speed
 
     // Clear existing content
     element.textContent = '';
     
-    // Split text into individual characters (works for both Chinese and English)
+    // Split text into individual characters
     const characters = Array.from(text);
     
-    // Type each character with random delay
+    // Function to determine if character is end of sentence
+    const isEndOfSentence = (char) => ['。', '！', '？', '.', '!', '?'].includes(char);
+    const isPunctuation = (char) => ['。', '，', '！', '？', '、', '.', ',', '!', '?'].includes(char);
+    
     for (let i = 0; i < characters.length; i++) {
       const char = characters[i];
       
+      // Random thinking pause (10% chance)
+      if (Math.random() < 0.1) {
+        await window.utils.randomDelay(THINKING_DELAY, THINKING_DELAY + 2000, true);
+      }
+      
       // Simulate keydown
       window.utils.simulateKeyboardEvent(element, 'keydown', char);
-      
-      // Different delays for different types of characters
-      if (/[\u4e00-\u9fa5]/.test(char)) {  // Chinese character
-        await window.utils.randomDelay(400, 800);  // Longer delay for Chinese characters
-      } else if (['。', '，', '！', '？', '、', '.', ',', '!', '?', '\n'].includes(char)) {
-        await window.utils.randomDelay(800, 1200);  // Even longer pause at punctuation and line breaks
-      } else {  // English characters or other symbols
-        await window.utils.randomDelay(200, 400);
-      }
       
       // Add the character
       element.textContent += char;
@@ -89,17 +96,29 @@ window.browse = {
       // Trigger input event
       element.dispatchEvent(new Event('input', { bubbles: true }));
       
-      // Occasional longer pause to simulate thinking
-      if (Math.random() < 0.1) {  // 10% chance
-        await window.utils.randomDelay(1000, 2000);
+      // Calculate delay for this character
+      let delay = BASE_CHAR_DELAY;
+      
+      // Add natural variation (-10% to +10%)
+      delay += BASE_CHAR_DELAY * (Math.random() * 0.2 - 0.1);
+      
+      // Add extra delays for punctuation and sentence endings
+      if (isPunctuation(char)) {
+        delay += PUNCTUATION_DELAY;
       }
+      if (isEndOfSentence(char)) {
+        delay += SENTENCE_END_DELAY;
+      }
+      
+      // Wait before next character (ignore browse speed for typing)
+      await window.utils.randomDelay(delay, delay + 200, true);
     }
 
     // Final input event
     element.dispatchEvent(new Event('input', { bubbles: true }));
     
-    // Add a natural pause after finishing typing
-    await window.utils.randomDelay(3000, 5000);
+    // Final pause
+    await window.utils.randomDelay(5000, 7000, true);
   },
 
   // Function to auto-reply to current post
