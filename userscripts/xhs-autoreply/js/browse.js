@@ -6,9 +6,20 @@ window.browse = {
   browseSpeed: 1,
   MAX_POSTS_BEFORE_SCROLL: 5,
   SELECTED_CLASS: 'post-selected',
+  isPostOpen: false,  // Track if a post is currently open
+  isFirstFocus: true,  // Allow first focus without restrictions
 
   // Function to focus on next post
   focusNextPost() {
+    // If a post is open and this isn't the first focus, prevent moving to next post
+    if (!this.isFirstFocus && this.isPostOpen) {
+      console.log('Preventing post skip - waiting for current post to be closed');
+      return;
+    }
+
+    // After first focus, mark it as done
+    this.isFirstFocus = false;
+
     // Remove selection from current post
     const currentSelected = document.querySelector('.' + this.SELECTED_CLASS);
     if (currentSelected) {
@@ -47,6 +58,7 @@ window.browse = {
       const currentPost = posts[this.currentPostIndex].querySelector('.cover');
       if (currentPost) {
         currentPost.click();
+        this.isPostOpen = true; // Mark post as open when clicked
       }
     }
   },
@@ -271,6 +283,7 @@ window.browse = {
         const closeButton = document.querySelector('.close-circle');
         if (closeButton) {
           closeButton.click();
+          this.isPostOpen = false; // Mark post as closed
           await window.utils.randomDelay(3000, 4500); // Longer wait for post to close
         }
 
@@ -295,6 +308,7 @@ window.browse = {
         }
       }
     } catch (error) {
+      this.isPostOpen = false; // Reset post state on error
       console.error('Error during auto-browsing:', error);
       this.isAutoBrowsing = false;
       const autoBrowseBtn = document.getElementById('autoBrowseBtn');
