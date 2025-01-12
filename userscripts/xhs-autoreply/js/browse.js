@@ -8,6 +8,7 @@ window.browse = {
   SELECTED_CLASS: 'post-selected',
   isPostOpen: false,  // Track if a post is currently open
   isFirstFocus: true,  // Allow first focus without restrictions
+  currentPostElement: null, // Track the current post element
 
   // Function to focus on next post
   focusNextPost() {
@@ -45,6 +46,7 @@ window.browse = {
     // Add selection to new post
     const currentPost = posts[this.currentPostIndex];
     if (currentPost) {
+      this.currentPostElement = currentPost; // Store reference to current post element
       const coverElement = currentPost.querySelector('.cover') || currentPost;
       coverElement.classList.add(this.SELECTED_CLASS);
       coverElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -60,6 +62,17 @@ window.browse = {
         currentPost.click();
         this.isPostOpen = true; // Mark post as open when clicked
       }
+    }
+  },
+
+  // Function to remove current post from page
+  removeCurrentPost() {
+    if (this.currentPostElement && this.currentPostElement.parentNode) {
+      this.currentPostElement.remove();
+      this.currentPostElement = null;
+      // Reset index since we removed a post
+      this.currentPostIndex--;
+      if (this.currentPostIndex < -1) this.currentPostIndex = -1;
     }
   },
 
@@ -213,9 +226,63 @@ window.browse = {
     return randomValue < parseFloat(frequency);
   },
 
+  // Function to check if post has been replied to
+  hasRepliedToPost(postId) {
+    const repliedPosts = JSON.parse(localStorage.getItem('xhs_replied_posts') || '[]');
+    return repliedPosts.includes(postId);
+  },
+
+  // Function to mark post as replied
+  markPostAsReplied(postId) {
+    const repliedPosts = JSON.parse(localStorage.getItem('xhs_replied_posts') || '[]');
+    if (!repliedPosts.includes(postId)) {
+      repliedPosts.push(postId);
+      localStorage.setItem('xhs_replied_posts', JSON.stringify(repliedPosts));
+    }
+  },
+
+  // Function to get post ID from element
+  getPostId(postElement) {
+    if (!postElement) return null;
+    const postLink = postElement.querySelector('a[href*="/explore/"]');
+    if (!postLink) return null;
+    return postLink.href.match(/\/explore\/([^?]+)/)?.[1];
+  },
+
   // Function to auto-browse posts
   async browsePost() {
     try {
+      // Check if we've already replied to this post before doing anything else
+      const postId = this.getPostId(this.currentPostElement);
+      if (!postId) {
+        console.log('Could not find post ID, skipping post');
+        this.removeCurrentPost();
+        this.focusNextPost();
+        if (this.isAutoBrowsing) {
+          await window.utils.randomDelay(1000, 1500);
+          await this.browsePost();
+        }
+        return;
+      }
+
+      // Check if auto-reply is enabled and if we should reply based on frequency
+      const toggleAutoReply = document.getElementById('toggleAutoReply');
+      const replyFrequency = document.getElementById('replyFrequency');
+      const shouldAutoReply = toggleAutoReply && toggleAutoReply.checked && 
+                            this.shouldReplyBasedOnFrequency(replyFrequency.value);
+
+      // If auto-reply is enabled and we've already replied to this post, skip it
+      if (shouldAutoReply && this.hasRepliedToPost(postId)) {
+        console.log('Already replied to post:', postId, 'skipping...');
+        this.removeCurrentPost();
+        this.focusNextPost();
+        if (this.isAutoBrowsing) {
+          await window.utils.randomDelay(1000, 1500);
+          await this.browsePost();
+        }
+        return;
+      }
+
       // Click the post
       await this.clickCurrentPost();
       await window.utils.randomDelay(4500, 6000);  // Longer initial wait
@@ -228,52 +295,48 @@ window.browse = {
         await window.utils.randomDelay(3000, 4500);  // Longer pause after scrolling
       }
 
-      // Check if auto-reply is enabled
-      const toggleAutoReply = document.getElementById('toggleAutoReply');
-      const replyFrequency = document.getElementById('replyFrequency');
-      
       let replyInProgress = false;
       
-      if (toggleAutoReply && toggleAutoReply.checked) {
-        // Check if we should reply based on frequency
-        if (this.shouldReplyBasedOnFrequency(replyFrequency.value)) {
-          try {
-            replyInProgress = true;
-            console.log('Attempting reply based on frequency:', replyFrequency.value);
-            const comments = window.ui.extractComments();
-            if (comments.length > 0) {
-              const config = window.api.loadConfig();
-              
-              // First get the API response
-              console.log('Getting API response...');
-              const response = await window.api.callApi(
-                config.apiAddress,
-                '', // API key is handled inside callApi
-                config.prompt1,
-                config.prompt2,
-                comments
-              );
+      if (shouldAutoReply) {
+        try {
+          replyInProgress = true;
+          console.log('Attempting reply to post:', postId);
+          const comments = window.ui.extractComments();
+          if (comments.length > 0) {
+            const config = window.api.loadConfig();
+            
+            // First get the API response
+            console.log('Getting API response...');
+            const response = await window.api.callApi(
+              config.apiAddress,
+              '', // API key is handled inside callApi
+              config.prompt1,
+              config.prompt2,
+              comments
+            );
 
-              // Wait a bit before starting to reply
-              await window.utils.randomDelay(2000, 3000);
+            // Wait a bit before starting to reply
+            await window.utils.randomDelay(2000, 3000);
 
-              // Then do the reply
-              console.log('Starting auto reply...');
-              await this.autoReply(response);
-
-              // Add extra delay after successful reply
-              console.log('Reply completed, waiting extra time to ensure completion...');
-              await window.utils.randomDelay(3000, 5000);  // Natural pause after reply
+            // Then do the reply
+            console.log('Starting auto reply...');
+            const replySuccess = await this.autoReply(response);
+            
+            // Mark post as replied if successful
+            if (replySuccess) {
+              this.markPostAsReplied(postId);
             }
-          } catch (error) {
-            console.error('Auto-reply during browsing failed:', error);
-            // Add extra delay if reply fails to ensure UI is back to normal
-            await window.utils.randomDelay(3000, 4500);
-          } finally {
-            replyInProgress = false;
+
+            // Add extra delay after successful reply
+            console.log('Reply completed, waiting extra time to ensure completion...');
+            await window.utils.randomDelay(3000, 5000);  // Natural pause after reply
           }
-        } else {
-          console.log('Skipping reply based on frequency:', replyFrequency.value);
+        } catch (error) {
+          console.error('Auto-reply during browsing failed:', error);
+          // Add extra delay if reply fails to ensure UI is back to normal
+          await window.utils.randomDelay(3000, 4500);
+        } finally {
+          replyInProgress = false;
         }
       }
 
@@ -284,7 +347,12 @@ window.browse = {
         if (closeButton) {
           closeButton.click();
           this.isPostOpen = false; // Mark post as closed
-          await window.utils.randomDelay(3000, 4500); // Longer wait for post to close
+          await window.utils.randomDelay(1000, 1500); // Short wait for post to close
+          
+          // Remove the post from page
+          this.removeCurrentPost();
+          
+          await window.utils.randomDelay(2000, 3000); // Additional wait after removing
         }
 
         // Move to next post
@@ -309,6 +377,7 @@ window.browse = {
       }
     } catch (error) {
       this.isPostOpen = false; // Reset post state on error
+      this.currentPostElement = null; // Reset current post reference
       console.error('Error during auto-browsing:', error);
       this.isAutoBrowsing = false;
       const autoBrowseBtn = document.getElementById('autoBrowseBtn');
