@@ -36,11 +36,43 @@ window.browse = {
       return;
     }
 
-    // Increment index or reset to 0 if at end
-    if (this.currentPostIndex === undefined || this.currentPostIndex >= posts.length - 1) {
+    // Check if auto-reply is enabled
+    const toggleAutoReply = document.getElementById('toggleAutoReply');
+    const isAutoReplyEnabled = toggleAutoReply && toggleAutoReply.checked;
+
+    // Find next unprocessed post
+    let foundUnprocessedPost = false;
+    let startIndex = this.currentPostIndex;
+    let loopCount = 0;
+
+    while (!foundUnprocessedPost && loopCount < posts.length) {
+      // Increment index or reset to 0 if at end
+      if (startIndex >= posts.length - 1) {
+        startIndex = 0;
+      } else {
+        startIndex++;
+      }
+
+      const post = posts[startIndex];
+      const postId = this.getPostId(post);
+
+      // If auto-reply is enabled, skip already replied posts
+      if (isAutoReplyEnabled && postId && this.hasRepliedToPost(postId)) {
+        console.log('Skipping already replied post:', postId);
+        loopCount++;
+        continue;
+      }
+
+      // Found a post we haven't replied to
+      foundUnprocessedPost = true;
+      this.currentPostIndex = startIndex;
+      break;
+    }
+
+    // If we've checked all posts and found none to process, reset to first post
+    if (!foundUnprocessedPost) {
+      console.log('No unprocessed posts found, starting from beginning');
       this.currentPostIndex = 0;
-    } else {
-      this.currentPostIndex++;
     }
 
     // Add selection to new post
@@ -62,17 +94,6 @@ window.browse = {
         currentPost.click();
         this.isPostOpen = true; // Mark post as open when clicked
       }
-    }
-  },
-
-  // Function to remove current post from page
-  removeCurrentPost() {
-    if (this.currentPostElement && this.currentPostElement.parentNode) {
-      this.currentPostElement.remove();
-      this.currentPostElement = null;
-      // Reset index since we removed a post
-      this.currentPostIndex--;
-      if (this.currentPostIndex < -1) this.currentPostIndex = -1;
     }
   },
 
@@ -252,11 +273,21 @@ window.browse = {
   // Function to auto-browse posts
   async browsePost() {
     try {
+      // If a post is still open, try to close it first
+      if (this.isPostOpen) {
+        console.log('Found open post, attempting to close it first...');
+        const closeButton = document.querySelector('.close-circle');
+        if (closeButton) {
+          closeButton.click();
+          await window.utils.randomDelay(1000, 1500);
+        }
+        this.isPostOpen = false;
+      }
+
       // Check if we've already replied to this post before doing anything else
       const postId = this.getPostId(this.currentPostElement);
       if (!postId) {
-        console.log('Could not find post ID, skipping post');
-        this.removeCurrentPost();
+        console.log('Could not find post ID, moving to next post');
         this.focusNextPost();
         if (this.isAutoBrowsing) {
           await window.utils.randomDelay(1000, 1500);
@@ -270,18 +301,6 @@ window.browse = {
       const replyFrequency = document.getElementById('replyFrequency');
       const shouldAutoReply = toggleAutoReply && toggleAutoReply.checked && 
                             this.shouldReplyBasedOnFrequency(replyFrequency.value);
-
-      // If auto-reply is enabled and we've already replied to this post, skip it
-      if (shouldAutoReply && this.hasRepliedToPost(postId)) {
-        console.log('Already replied to post:', postId, 'skipping...');
-        this.removeCurrentPost();
-        this.focusNextPost();
-        if (this.isAutoBrowsing) {
-          await window.utils.randomDelay(1000, 1500);
-          await this.browsePost();
-        }
-        return;
-      }
 
       // Click the post
       await this.clickCurrentPost();
@@ -348,12 +367,9 @@ window.browse = {
           closeButton.click();
           this.isPostOpen = false; // Mark post as closed
           await window.utils.randomDelay(1000, 1500); // Short wait for post to close
-          
-          // Remove the post from page
-          this.removeCurrentPost();
-          
-          await window.utils.randomDelay(2000, 3000); // Additional wait after removing
         }
+
+        await window.utils.randomDelay(2000, 3000); // Additional wait after closing
 
         // Move to next post
         this.focusNextPost();
@@ -376,15 +392,28 @@ window.browse = {
         }
       }
     } catch (error) {
-      this.isPostOpen = false; // Reset post state on error
-      this.currentPostElement = null; // Reset current post reference
       console.error('Error during auto-browsing:', error);
+      // Reset all states on error
+      this.isPostOpen = false;
+      this.currentPostElement = null;
       this.isAutoBrowsing = false;
+      
+      // Try to close any open post
+      const closeButton = document.querySelector('.close-circle');
+      if (closeButton) {
+        closeButton.click();
+        await window.utils.randomDelay(1000, 1500);
+      }
+      
+      // Update UI
       const autoBrowseBtn = document.getElementById('autoBrowseBtn');
       if (autoBrowseBtn) {
         autoBrowseBtn.textContent = '开始自动评论';
         autoBrowseBtn.style.backgroundColor = '#9c27b0';
       }
+      
+      // Move to next post to try to recover
+      this.focusNextPost();
     }
   }
 }; 
