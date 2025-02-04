@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "小红书自动评论",
-  "version": "1.0",
+  "version": "1.1",
   "description": "小红书自动浏览，AI驱动的自动评论",
   "permissions": ["clipboardWrite"],
   "content_scripts": [

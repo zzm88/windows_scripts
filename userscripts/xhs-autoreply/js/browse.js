@@ -234,6 +234,36 @@ window.browse = {
       
       submitButton.click();
 
+      // Step 7: Wait for submission confirmation
+      console.log('Step 7: Waiting for submission confirmation...');
+      // Wait for the submit button to be disabled or disappear, indicating submission complete
+      await new Promise((resolve, reject) => {
+        let checkCount = 0;
+        const maxChecks = 20; // Maximum number of checks (10 seconds total)
+        const checkInterval = setInterval(async () => {
+          checkCount++;
+          const currentSubmitBtn = document.querySelector('button.btn.submit');
+          
+          // Check if button is disabled or disappeared
+          if (!currentSubmitBtn || currentSubmitBtn.disabled) {
+            clearInterval(checkInterval);
+            await window.utils.randomDelay(2000, 3000); // Extra wait after confirmation
+            resolve();
+          } 
+          // Check for error messages or other failure indicators
+          else if (document.querySelector('.error-message')) {
+            clearInterval(checkInterval);
+            reject(new Error('Submission failed - error message found'));
+          }
+          // Timeout after 10 seconds
+          else if (checkCount >= maxChecks) {
+            clearInterval(checkInterval);
+            reject(new Error('Submission timeout - no confirmation received'));
+          }
+        }, 500); // Check every 500ms
+      });
+
+      console.log('Reply submitted successfully');
       return true;
     } catch (error) {
       console.error('Auto-reply error:', error);
@@ -268,6 +298,17 @@ window.browse = {
     const postLink = postElement.querySelector('a[href*="/explore/"]');
     if (!postLink) return null;
     return postLink.href.match(/\/explore\/([^?]+)/)?.[1];
+  },
+
+  // Function to check if comments contain ignored keywords
+  hasIgnoredKeywords(comments) {
+    const ignoreKeywordsInput = document.getElementById('ignoreKeywords');
+    if (!ignoreKeywordsInput || !ignoreKeywordsInput.value.trim()) return false;
+    
+    const keywords = ignoreKeywordsInput.value.split(',').map(k => k.trim().toLowerCase());
+    const commentsText = comments.join(' ').toLowerCase();
+    
+    return keywords.some(keyword => commentsText.includes(keyword));
   },
 
   // Function to auto-browse posts
@@ -306,6 +347,26 @@ window.browse = {
       await this.clickCurrentPost();
       await window.utils.randomDelay(4500, 6000);  // Longer initial wait
 
+      // Extract comments and check for ignored keywords
+      const comments = window.ui.extractComments();
+      if (this.hasIgnoredKeywords(comments)) {
+        console.log('Found ignored keywords in comments, skipping post');
+        // Close the post
+        const closeButton = document.querySelector('.close-circle');
+        if (closeButton) {
+          closeButton.click();
+          this.isPostOpen = false;
+          await window.utils.randomDelay(1000, 1500);
+        }
+        // Move to next post
+        this.focusNextPost();
+        if (this.isAutoBrowsing) {
+          await window.utils.randomDelay(1000, 1500);
+          await this.browsePost();
+        }
+        return;
+      }
+
       // Find the note scroller
       const scroller = document.querySelector('.note-scroller');
       if (scroller) {
@@ -322,6 +383,25 @@ window.browse = {
           console.log('Attempting reply to post:', postId);
           const comments = window.ui.extractComments();
           if (comments.length > 0) {
+            // Check for ignored keywords before proceeding with API call
+            if (this.hasIgnoredKeywords(comments)) {
+              console.log('Found ignored keywords in comments, skipping post');
+              // Close the post
+              const closeButton = document.querySelector('.close-circle');
+              if (closeButton) {
+                closeButton.click();
+                this.isPostOpen = false;
+                await window.utils.randomDelay(1000, 1500);
+              }
+              // Move to next post
+              this.focusNextPost();
+              if (this.isAutoBrowsing) {
+                await window.utils.randomDelay(1000, 1500);
+                await this.browsePost();
+              }
+              return;
+            }
+
             const config = window.api.loadConfig();
             
             // First get the API response
