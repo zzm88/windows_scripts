@@ -9,6 +9,8 @@ window.browse = {
   isPostOpen: false,  // Track if a post is currently open
   isFirstFocus: true,  // Allow first focus without restrictions
   currentPostElement: null, // Track the current post element
+  isTyping: false, // Add new flag to track typing status
+  replyInProgress: false,  // Set lock at start
 
   // Function to focus on next post
   focusNextPost() {
@@ -98,78 +100,96 @@ window.browse = {
   },
 
   async simulateTyping(element, text) {
-    // Constants for typing speed (all times in milliseconds)
-    const CHAR_PER_MINUTE = 1000;
-    const MS_PER_MINUTE = 60 * 1000;
-    const BASE_CHAR_DELAY = MS_PER_MINUTE / CHAR_PER_MINUTE;  // 1500ms per character for 40 chars/minute
-    
-    const PUNCTUATION_DELAY = 2000;  // Extra delay for punctuation
-    const SENTENCE_END_DELAY = 3000;  // Extra delay for end of sentences
-    const THINKING_DELAY = 5000;  // Random thinking pauses
-    
-    // Focus element
-    element.focus();
-    window.utils.simulateKeyboardEvent(element, 'keydown');
-    await window.utils.randomDelay(2000, 3000, true);  // Initial delay, ignore browse speed
+    try {
+      this.isTyping = true; // Set typing flag at start
+      // Constants for typing speed (all times in milliseconds)
+      const CHAR_PER_MINUTE = 1000;
+      const MS_PER_MINUTE = 60 * 1000;
+      const BASE_CHAR_DELAY = MS_PER_MINUTE / CHAR_PER_MINUTE;
+      
+      const PUNCTUATION_DELAY = 2000;
+      const SENTENCE_END_DELAY = 3000;
+      const THINKING_DELAY = 5000;
+      
+      element.focus();
+      window.utils.simulateKeyboardEvent(element, 'keydown');
+      await window.utils.randomDelay(2000, 3000, true);
 
-    // Clear existing content
-    element.textContent = '';
-    
-    // Split text into individual characters
-    const characters = Array.from(text);
-    
-    // Function to determine if character is end of sentence
-    const isEndOfSentence = (char) => ['。', '！', '？', '.', '!', '?'].includes(char);
-    const isPunctuation = (char) => ['。', '，', '！', '？', '、', '.', ',', '!', '?'].includes(char);
-    
-    for (let i = 0; i < characters.length; i++) {
-      const char = characters[i];
+      element.textContent = '';
       
-      // Random thinking pause (10% chance)
-      if (Math.random() < 0.1) {
-        await window.utils.randomDelay(THINKING_DELAY, THINKING_DELAY + 2000, true);
+      const characters = Array.from(text);
+      
+      const isEndOfSentence = (char) => ['。', '！', '？', '.', '!', '?'].includes(char);
+      const isPunctuation = (char) => ['。', '，', '！', '？', '、', '.', ',', '!', '?'].includes(char);
+      
+      for (let i = 0; i < characters.length; i++) {
+        const char = characters[i];
+        
+        if (Math.random() < 0.1) {
+          await window.utils.randomDelay(THINKING_DELAY, THINKING_DELAY + 2000, true);
+        }
+        
+        window.utils.simulateKeyboardEvent(element, 'keydown', char);
+        element.textContent += char;
+        window.utils.simulateKeyboardEvent(element, 'keyup', char);
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        let delay = BASE_CHAR_DELAY;
+        delay += BASE_CHAR_DELAY * (Math.random() * 0.2 - 0.1);
+        
+        if (isPunctuation(char)) {
+          delay += PUNCTUATION_DELAY;
+        }
+        if (isEndOfSentence(char)) {
+          delay += SENTENCE_END_DELAY;
+        }
+        
+        await window.utils.randomDelay(delay, delay + 200, true);
       }
-      
-      // Simulate keydown
-      window.utils.simulateKeyboardEvent(element, 'keydown', char);
-      
-      // Add the character
-      element.textContent += char;
-      
-      // Simulate keyup
-      window.utils.simulateKeyboardEvent(element, 'keyup', char);
-      
-      // Trigger input event
+
       element.dispatchEvent(new Event('input', { bubbles: true }));
-      
-      // Calculate delay for this character
-      let delay = BASE_CHAR_DELAY;
-      
-      // Add natural variation (-10% to +10%)
-      delay += BASE_CHAR_DELAY * (Math.random() * 0.2 - 0.1);
-      
-      // Add extra delays for punctuation and sentence endings
-      if (isPunctuation(char)) {
-        delay += PUNCTUATION_DELAY;
-      }
-      if (isEndOfSentence(char)) {
-        delay += SENTENCE_END_DELAY;
-      }
-      
-      // Wait before next character (ignore browse speed for typing)
-      await window.utils.randomDelay(delay, delay + 200, true);
+      await window.utils.randomDelay(5000, 7000, true);
+      return true;
+    } catch (error) {
+      console.error('Error during typing:', error);
+      throw error;
+    } finally {
+      this.isTyping = false; // Reset typing flag when done
     }
+  },
 
-    // Final input event
-    element.dispatchEvent(new Event('input', { bubbles: true }));
+  // Add new function to simulate escape key
+  simulateEscapeKey() {
+    document.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Escape',
+      code: 'Escape',
+      keyCode: 27,
+      which: 27,
+      bubbles: true,
+      cancelable: true
+    }));
     
-    // Final pause
-    await window.utils.randomDelay(5000, 7000, true);
+    document.dispatchEvent(new KeyboardEvent('keyup', {
+      key: 'Escape',
+      code: 'Escape',
+      keyCode: 27,
+      which: 27,
+      bubbles: true,
+      cancelable: true
+    }));
   },
 
   // Function to auto-reply to current post
   async autoReply(responseText) {
+    this.replyInProgress = true;
     try {
+      // Remove any existing close button event listeners
+      const closeButton = document.querySelector('.close-circle');
+      if (closeButton) {
+        const newCloseButton = closeButton.cloneNode(true);
+        closeButton.parentNode.replaceChild(newCloseButton, closeButton);
+      }
+
       // Step 1: Find and click the initial comment input area
       console.log('Step 1: Finding initial comment area...');
       const initialCommentArea = document.querySelector('div.inner');
@@ -194,9 +214,17 @@ window.browse = {
       await window.utils.randomDelay(300, 500);
 
       // Step 4: Simulate typing
-      console.log('Step 4: Typing response...');
+      console.log('Step 4: Starting typing...');
+      this.isTyping = true;  // Set typing flag
       await this.simulateTyping(textarea, responseText);
-      await window.utils.randomDelay(500, 1000);
+      
+      // Verify typing completion
+      if (textarea.textContent !== responseText) {
+        throw new Error('Typing verification failed');
+      }
+      console.log('Typing completed successfully');
+      this.isTyping = false;  // Reset typing flag
+      await window.utils.randomDelay(1000, 1500);
 
       // Step 5: Find and prepare submit button
       console.log('Step 5: Preparing submit button...');
@@ -210,64 +238,69 @@ window.browse = {
       submitButton.removeAttribute('disabled');
       await window.utils.randomDelay(500, 800);
       
-      // Simulate mouse events on submit button
-      submitButton.dispatchEvent(new MouseEvent('mouseover', {
-        bubbles: true,
-        cancelable: true,
-        view: window
-      }));
-      await window.utils.randomDelay(100, 200);
-      
-      submitButton.dispatchEvent(new MouseEvent('mousedown', {
-        bubbles: true,
-        cancelable: true,
-        view: window
-      }));
-      await window.utils.randomDelay(50, 100);
-      
-      submitButton.dispatchEvent(new MouseEvent('mouseup', {
-        bubbles: true,
-        cancelable: true,
-        view: window
-      }));
-      await window.utils.randomDelay(50, 100);
-      
       submitButton.click();
 
       // Step 7: Wait for submission confirmation
       console.log('Step 7: Waiting for submission confirmation...');
-      // Wait for the submit button to be disabled or disappear, indicating submission complete
+      let submissionSuccess = false;
       await new Promise((resolve, reject) => {
         let checkCount = 0;
-        const maxChecks = 20; // Maximum number of checks (10 seconds total)
+        const maxChecks = 40;
         const checkInterval = setInterval(async () => {
           checkCount++;
           const currentSubmitBtn = document.querySelector('button.btn.submit');
+          const successIndicator = document.querySelector('.success-message, .comment-success');
+          const errorIndicator = document.querySelector('.error-message, .comment-error');
           
-          // Check if button is disabled or disappeared
-          if (!currentSubmitBtn || currentSubmitBtn.disabled) {
+          if (successIndicator || (!currentSubmitBtn && checkCount > 4)) {
             clearInterval(checkInterval);
-            await window.utils.randomDelay(2000, 3000); // Extra wait after confirmation
-            resolve();
-          } 
-          // Check for error messages or other failure indicators
-          else if (document.querySelector('.error-message')) {
+            submissionSuccess = true;
+            await window.utils.randomDelay(2000, 3000);
+            resolve(true);
+          }
+          else if (errorIndicator) {
             clearInterval(checkInterval);
             reject(new Error('Submission failed - error message found'));
           }
-          // Timeout after 10 seconds
           else if (checkCount >= maxChecks) {
             clearInterval(checkInterval);
             reject(new Error('Submission timeout - no confirmation received'));
           }
-        }, 500); // Check every 500ms
+        }, 500);
       });
 
-      console.log('Reply submitted successfully');
-      return true;
+      if (submissionSuccess) {
+        console.log('Reply submitted successfully, closing post...');
+        await window.utils.randomDelay(1000, 2000);
+        
+        // Try multiple methods to close the post
+        const closeButton = document.querySelector('.close-circle');
+        if (closeButton) {
+          closeButton.click();
+          await window.utils.randomDelay(500, 1000);
+        }
+        
+        // Simulate escape key press as backup
+        this.simulateEscapeKey();
+        await window.utils.randomDelay(500, 1000);
+        
+        // Double check if post is still open and try one more time
+        const stillOpenCloseButton = document.querySelector('.close-circle');
+        if (stillOpenCloseButton) {
+          this.simulateEscapeKey();
+        }
+        
+        this.isPostOpen = false;
+        await window.utils.randomDelay(1000, 2000);
+      }
+
+      return submissionSuccess;
     } catch (error) {
       console.error('Auto-reply error:', error);
       throw error;
+    } finally {
+      this.replyInProgress = false;
+      this.isTyping = false;
     }
   },
 
@@ -314,8 +347,8 @@ window.browse = {
   // Function to auto-browse posts
   async browsePost() {
     try {
-      // If a post is still open, try to close it first
-      if (this.isPostOpen) {
+      // Only close post if not in middle of reply process
+      if (this.isPostOpen && !this.replyInProgress && !this.isTyping) {
         console.log('Found open post, attempting to close it first...');
         const closeButton = document.querySelector('.close-circle');
         if (closeButton) {
@@ -375,104 +408,82 @@ window.browse = {
         await window.utils.randomDelay(3000, 4500);  // Longer pause after scrolling
       }
 
-      let replyInProgress = false;
+      let replySuccessful = false;
       
       if (shouldAutoReply) {
         try {
-          replyInProgress = true;
           console.log('Attempting reply to post:', postId);
           const comments = window.ui.extractComments();
           if (comments.length > 0) {
-            // Check for ignored keywords before proceeding with API call
             if (this.hasIgnoredKeywords(comments)) {
               console.log('Found ignored keywords in comments, skipping post');
-              // Close the post
-              const closeButton = document.querySelector('.close-circle');
-              if (closeButton) {
-                closeButton.click();
-                this.isPostOpen = false;
+              // Simulate escape key to close post
+              this.simulateEscapeKey();
+              await window.utils.randomDelay(1000, 1500);
+            } else {
+              const config = window.api.loadConfig();
+              
+              console.log('Getting API response...');
+              const response = await window.api.callApi(
+                config.apiAddress,
+                '',
+                config.prompt1,
+                config.prompt2,
+                comments
+              );
+
+              await window.utils.randomDelay(2000, 3000);
+
+              console.log('Starting auto reply...');
+              replySuccessful = await this.autoReply(response);
+              
+              if (replySuccessful) {
+                this.markPostAsReplied(postId);
+                console.log('Reply completed successfully');
+              } else {
+                // If reply wasn't successful, try to close post
+                this.simulateEscapeKey();
                 await window.utils.randomDelay(1000, 1500);
               }
-              // Move to next post
-              this.focusNextPost();
-              if (this.isAutoBrowsing) {
-                await window.utils.randomDelay(1000, 1500);
-                await this.browsePost();
-              }
-              return;
             }
-
-            const config = window.api.loadConfig();
-            
-            // First get the API response
-            console.log('Getting API response...');
-            const response = await window.api.callApi(
-              config.apiAddress,
-              '', // API key is handled inside callApi
-              config.prompt1,
-              config.prompt2,
-              comments
-            );
-
-            // Wait a bit before starting to reply
-            await window.utils.randomDelay(2000, 3000);
-
-            // Then do the reply
-            console.log('Starting auto reply...');
-            const replySuccess = await this.autoReply(response);
-            
-            // Mark post as replied if successful
-            if (replySuccess) {
-              this.markPostAsReplied(postId);
-            }
-
-            // Add extra delay after successful reply
-            console.log('Reply completed, waiting extra time to ensure completion...');
-            await window.utils.randomDelay(3000, 5000);  // Natural pause after reply
           }
         } catch (error) {
           console.error('Auto-reply during browsing failed:', error);
-          // Add extra delay if reply fails to ensure UI is back to normal
-          await window.utils.randomDelay(3000, 4500);
-        } finally {
-          replyInProgress = false;
+          // Try to close post on error
+          this.simulateEscapeKey();
+          await window.utils.randomDelay(1000, 1500);
         }
       }
 
-      // Only proceed with closing if reply is not in progress
-      if (!replyInProgress) {
-        // Find and click close button
-        const closeButton = document.querySelector('.close-circle');
-        if (closeButton) {
-          closeButton.click();
-          this.isPostOpen = false; // Mark post as closed
-          await window.utils.randomDelay(1000, 1500); // Short wait for post to close
+      // Final check to ensure post is closed
+      if (this.isPostOpen) {
+        this.simulateEscapeKey();
+        await window.utils.randomDelay(1000, 1500);
+        this.isPostOpen = false;
+      }
+
+      // Move to next post
+      this.focusNextPost();
+      this.autoBrowseCount++;
+
+      // Check if we need to scroll the main feed
+      if (this.autoBrowseCount % this.MAX_POSTS_BEFORE_SCROLL === 0) {
+        const mainContainer = document.getElementById('mfContainer');
+        if (mainContainer) {
+          console.log('Scrolling main feed to load more posts...');
+          await window.utils.simulateScroll(mainContainer, mainContainer.scrollHeight, 6000 / this.browseSpeed);  // Slower main feed scroll
+          await window.utils.randomDelay(4500, 6000); // Longer wait for new posts to load
         }
+      }
 
-        await window.utils.randomDelay(2000, 3000); // Additional wait after closing
-
-        // Move to next post
-        this.focusNextPost();
-        this.autoBrowseCount++;
-
-        // Check if we need to scroll the main feed
-        if (this.autoBrowseCount % this.MAX_POSTS_BEFORE_SCROLL === 0) {
-          const mainContainer = document.getElementById('mfContainer');
-          if (mainContainer) {
-            console.log('Scrolling main feed to load more posts...');
-            await window.utils.simulateScroll(mainContainer, mainContainer.scrollHeight, 6000 / this.browseSpeed);  // Slower main feed scroll
-            await window.utils.randomDelay(4500, 6000); // Longer wait for new posts to load
-          }
-        }
-
-        // Continue browsing if auto-browse is still active
-        if (this.isAutoBrowsing) {
-          await window.utils.randomDelay(3000, 4500); // Longer wait between posts
-          await this.browsePost();
-        }
+      // Continue browsing if auto-browse is still active
+      if (this.isAutoBrowsing) {
+        await window.utils.randomDelay(3000, 4500); // Longer wait between posts
+        await this.browsePost();
       }
     } catch (error) {
       console.error('Error during auto-browsing:', error);
+      this.simulateEscapeKey(); // Try to close post on error
       // Reset all states on error
       this.isPostOpen = false;
       this.currentPostElement = null;
