@@ -450,7 +450,7 @@ window.ui = {
     // Add max-height and scrolling to the UI container
     const container = document.getElementById('xhs-comment-extractor');
     if (container) {
-      container.style.maxHeight = '800px';
+      container.style.maxHeight = '90vh'; // Increase from 800px to 90% of viewport height
       container.style.overflowY = 'auto';
       // Add some padding to account for scrollbar
       container.style.paddingRight = '20px';
@@ -1297,5 +1297,43 @@ window.ui = {
       notification.style.opacity = '0';
       setTimeout(() => notification.remove(), 300);
     }, duration);
+  },
+
+  // Function to update status message
+  updateStatusMessage(message, type = 'info') {
+    const statusMessageElement = document.getElementById('statusMessage');
+    const statusMessageArea = document.getElementById('statusMessageArea');
+    
+    if (!statusMessageElement || !statusMessageArea) return;
+    
+    // Update the message text
+    statusMessageElement.textContent = message;
+    
+    // Update the styling based on message type
+    switch (type) {
+      case 'info':
+        statusMessageArea.style.backgroundColor = '#f5f5f5';
+        statusMessageArea.style.color = '#666';
+        break;
+      case 'success':
+        statusMessageArea.style.backgroundColor = '#f0f9eb';
+        statusMessageArea.style.color = '#52c41a';
+        break;
+      case 'warning':
+        statusMessageArea.style.backgroundColor = '#fff7e6';
+        statusMessageArea.style.color = '#fa8c16';
+        break;
+      case 'error':
+        statusMessageArea.style.backgroundColor = '#fff1f0';
+        statusMessageArea.style.color = '#ff4d4f';
+        break;
+      case 'processing':
+        statusMessageArea.style.backgroundColor = '#e6f7ff';
+        statusMessageArea.style.color = '#1890ff';
+        break;
+      default:
+        statusMessageArea.style.backgroundColor = '#f5f5f5';
+        statusMessageArea.style.color = '#666';
+    }
   }
 }; 
